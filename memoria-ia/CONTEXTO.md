@@ -33,6 +33,17 @@ topo dos dashboards. Um arquivo, 17 `customElements`, um motor só.
 **Verificar:** `node --check dist/…`, `node tools/probe.js`,
 `IA/tools/check-embeds.sh`. Conferência de tela é do dono (regra global 30).
 
-**DevOps:** ainda **não** aplicado — o dono pediu para padronizar só depois da
-validação visual. Quando for: `IA/tools/mw-devops.sh apply mw-ha-top-buttons-pack`
-e a skill `mw-devops-repo`.
+**DevOps:** aplicado em 14/08/2026 (`mw-devops.sh apply`) — CI + auto-release +
+release por tag, no PR #1. A versão mora em `const VERSION`, e é nela que o sed
+do workflow bate. Falta, depois do merge:
+`mw-devops.sh github mw-ha-top-buttons-pack` (regras do lado do GitHub).
+
+**Quem consome este pack:** o `mw-ha-top-buttons-studio` (privado) monta a
+fileira de topo de um ambiente e publica a seção. O padrão de card que a casa
+usa saiu do que o dono montou à mão na sala: sem rótulo desenhado, `icon`
+escrito no YAML, `decimals: 0`, `intensity: 0`, ação «Nada» e `grid_options`
+só com `rows: auto`. As 7 fileiras da casa estão publicadas nesse padrão.
+
+**Armadilha nova (v0.2.2):** o ícone da GRANDEZA vence o da entidade —
+`sensor.temperatura_da_sala_de_tv` traz `icon: mdi:television` e o botão de
+temperatura saía com uma TV desenhada. Só o card genérico herda o da entidade.

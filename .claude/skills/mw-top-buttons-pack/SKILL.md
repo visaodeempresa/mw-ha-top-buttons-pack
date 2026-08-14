@@ -41,6 +41,8 @@ no topo de um dashboard recriariam doze shadow roots a cada leitura de sensor.
 | Anel torto dentro do card | `border-radius: inherit` num elemento recuado | raio = `(corner − recuo) / (1 − 2·recuo/100)` |
 | Seletor do editor não lista um sensor que existe | integração Tuya sem `device_class` (COV em ppm, PM2.5 sem unidade) | `_sel()` em cascata: classe → unidade → nome pt-BR |
 | Valor pequeno aparece como `0` | casas decimais da unidade canônica (COV em ppb) aplicadas a ppm | piso de casas quando `|v| < 1` |
+| Botão de temperatura com uma TV desenhada | `icon` da entidade vencia o da grandeza (`sensor.temperatura_da_sala_de_tv`) | v0.2.2: o ícone do tipo manda; só o genérico herda |
+| Porta com o ícone congelado | `icon:` fixo no YAML de um card liga/desliga | não escrever `icon` em porta/ocupação/movimento — o ícone muda com o estado |
 | Soma de potência ~40 % menor que o esperado | medidor em kW somado como W | `F_POWER`/`F_ENERGY` convertem antes de somar |
 | Card do tipo `mw-top-door-window-card` abre o editor como «genérico» | regex `[a-z0-9_]+` não casa hífen no meio do tag | `_typeKind()` traduz hífen → sublinhado |
 | Botão nasce clicável sem ação configurada | `_clickable()` só olha as três ações; qualquer default ≠ `none` estraga | ação padrão do pacote é `{action:"none"}` |
@@ -65,6 +67,9 @@ visto em vez de deixar implícito que foi.
 `IA/runbooks/instalar-card-no-hacs-por-websocket.md`. Resumo: `hacs/repositories/add`
 (plural!) com `category="plugin"`, depois `hacs/repository/download` com a
 **versão explícita** — o `available_version` do HACS demora a atualizar.
+
+**Quem gera as fileiras** é o `mw-ha-top-buttons-studio` (repo privado, skill
+própria). O padrão de card da casa está lá — não invente outro aqui.
 
 Sem release publicada no GitHub o HACS não baixa nada: para teste rápido, o
 caminho é o deploy por SSH (`IA/runbooks/deploy-card-hacs-ssh.md`), lembrando
