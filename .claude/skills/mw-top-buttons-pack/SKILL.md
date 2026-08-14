@@ -35,8 +35,12 @@ no topo de um dashboard recriariam doze shadow roots a cada leitura de sensor.
 
 | Sintoma | Causa | Correção |
 |---|---|---|
-| Uma cor da rampa nunca aparece (ex.: verde some da temperatura) | `rampKey()` reamostra por arredondamento; rampa com 8 entradas e 7 faixas pula uma | manter `len(RAMPS[x]) == len(stops) + 1` |
-| Número ilegível em temperatura/umidade | escala canônica de clima usada como cor de texto (25 °C = amarelo puro) | escala no **anel** (`--mw-ring`); o número usa `accentOf()` do papel |
+| Uma cor da rampa nunca aparece | `rampPaper()` reamostra a lista de matizes por arredondamento | manter `len(RAMPS[x].hues)` igual ao número de faixas (`stops + 1`) |
+| Número ilegível em temperatura/umidade | escala canônica usada como cor de **texto** (25 °C = amarelo puro) | a escala é o **papel** (amansada, via `paperTinted`) e a cor crua fica no anel; o número usa a tinta do L |
+| «Quarto no breu» quase igual a «quarto aceso» | rampa só trocando matiz varia 12 pontos de luminosidade | `alcance` da rampa empurrando o tom (`tomComNivel`), simétrico nos dois temas |
+| Anel torto dentro do card | `border-radius: inherit` num elemento recuado | raio = `(corner − recuo) / (1 − 2·recuo/100)` |
+| Seletor do editor não lista um sensor que existe | integração Tuya sem `device_class` (COV em ppm, PM2.5 sem unidade) | `_sel()` em cascata: classe → unidade → nome pt-BR |
+| Valor pequeno aparece como `0` | casas decimais da unidade canônica (COV em ppb) aplicadas a ppm | piso de casas quando `|v| < 1` |
 | Soma de potência ~40 % menor que o esperado | medidor em kW somado como W | `F_POWER`/`F_ENERGY` convertem antes de somar |
 | Card do tipo `mw-top-door-window-card` abre o editor como «genérico» | regex `[a-z0-9_]+` não casa hífen no meio do tag | `_typeKind()` traduz hífen → sublinhado |
 | Botão nasce clicável sem ação configurada | `_clickable()` só olha as três ações; qualquer default ≠ `none` estraga | ação padrão do pacote é `{action:"none"}` |

@@ -8,7 +8,9 @@ topo dos dashboards. Um arquivo, 17 `customElements`, um motor só.
 | Quero | Vou em |
 |---|---|
 | grandeza nova | tabela `KINDS` — uma linha (o registro no fim do arquivo é automático) |
-| cor de fundo por faixa | `RAMPS` + `stops` da grandeza + `_skin()` |
+| cor de fundo por faixa | `RAMPS` (matiz + direção + alcance) + `stops` + `_skin()` |
+| claro/escuro e os meios-termos | `TONS` + `paperSurface(hue, nivel, tom)` |
+| escala canônica no papel | `paperTinted()` — matiz da escala, S/L do papel |
 | o que aparece dentro do botão | `_build()` (estrutura/CSS, roda 1× por config) |
 | valor/cor a cada leitura | `_paint()` (só variáveis CSS e textContent) |
 | campo do editor | `_schema()` + `LABELS` |
