@@ -1,5 +1,15 @@
 # HISTÓRICO
 
+## 0.1.1 — 2026-08-14
+
+Conferido na bancada (`docs/preview.html`), papel de dia e de noite:
+
+- valor longo (`0,042 mg/m³`) encostava nas duas bordas — o corpo do número
+  agora encolhe conforme o comprimento do texto (piso em 0,5×)
+- círculo ganhou folga interna (14 % → 19 %): o texto tocava a curva
+- bancada offline com os 17 tipos, três leituras da mesma grandeza e os três
+  níveis de 3D lado a lado
+
 ## 0.1.0 — 2026-08-14
 
 Nascimento do pacote. 17 tipos de card num arquivo só:

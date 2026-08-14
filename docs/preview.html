@@ -1,0 +1,169 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MW Top Buttons Pack — bancada</title>
+<!--
+  Bancada offline: carrega o pacote de verdade (dist/…js) com um `hass` de
+  mentira e dublês de <ha-card>/<ha-icon>. Serve para ver o desenho sem
+  depender do HA — NÃO substitui a conferência no HA de verdade.
+    python3 -m http.server -d . 8099   →   http://localhost:8099/docs/preview.html
+-->
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 28px; font: 14px/1.4 -apple-system, system-ui, sans-serif;
+         background: #d9d5cc; color: #1a1a1a; }
+  body.noite { background: #14120f; color: #f2efe7; }
+  h2 { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+       opacity: .55; margin: 26px 0 10px; }
+  .fila { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+          gap: 14px; max-width: 1180px; }
+  .cap { font-size: 11px; opacity: .55; text-align: center; margin-top: 6px; }
+  .bt { position: fixed; top: 14px; right: 16px; z-index: 9; padding: 8px 14px; border-radius: 10px;
+        border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.15);
+        color: inherit; font: inherit; cursor: pointer; }
+</style>
+<button class="bt" onclick="virar()">papel de noite / de dia</button>
+<div id="tela"></div>
+
+<script type="module">
+import * as mdi from "https://esm.sh/@mdi/js@7.4.47";
+
+/* dublês: o pacote só depende de <ha-card> (a caixa) e <ha-icon> (o desenho) */
+class HaCard extends HTMLElement {
+  connectedCallback() {
+    if (this.shadowRoot) return;
+    this.attachShadow({ mode: "open" }).innerHTML =
+      `<style>:host{display:block;height:100%}</style><slot></slot>`;
+  }
+}
+customElements.define("ha-card", HaCard);
+
+const nome = (i) => "mdi" + String(i || "").replace(/^mdi:/, "")
+  .replace(/(^|-)([a-z0-9])/g, (_, __, c) => c.toUpperCase());
+class HaIcon extends HTMLElement {
+  static get observedAttributes() { return ["icon"]; }
+  attributeChangedCallback() { this.pinta(); }
+  connectedCallback() { this.pinta(); }
+  pinta() {
+    const d = mdi[nome(this.getAttribute("icon"))] || mdi.mdiHelpRhombusOutline;
+    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML =
+      `<style>:host{display:block}svg{width:100%;height:100%;display:block}</style>
+       <svg viewBox="0 0 24 24"><path fill="currentColor" d="${d}"></path></svg>`;
+  }
+}
+customElements.define("ha-icon", HaIcon);
+
+/* estados de mentira, escolhidos para mostrar a rampa inteira */
+const st = (s, u, dc, n) => ({ state: String(s), attributes: { unit_of_measurement: u, device_class: dc, friendly_name: n } });
+const hass = {
+  locale: { language: "pt-BR" },
+  themes: { darkMode: false },
+  states: {
+    "sensor.t_frio": st(8.2, "°C", "temperature", "Varanda"),
+    "sensor.t_bom": st(23.4, "°C", "temperature", "Sala"),
+    "sensor.t_quente": st(34.1, "°C", "temperature", "Sótão"),
+    "sensor.umid": st(58, "%", "humidity", "Sala"),
+    "sensor.umid_seca": st(28, "%", "humidity", "Escritório"),
+    "sensor.lux": st(742, "lx", "illuminance", "Sala"),
+    "sensor.co2_ok": st(520, "ppm", "carbon_dioxide", "Sala"),
+    "sensor.co2_ruim": st(1240, "ppm", "carbon_dioxide", "Quarto"),
+    "sensor.pm25": st(41, "µg/m³", "pm25", "Sala"),
+    "sensor.pm10": st(88, "µg/m³", "pm10", "Sala"),
+    "sensor.voc": st(260, "ppb", "volatile_organic_compounds_parts", "Sala"),
+    "sensor.ch2o": st(0.042, "mg/m³", "volatile_organic_compounds", "Sala"),
+    "sensor.aqi": st(72, "AQI", "aqi", "Casa"),
+    "sensor.pot_a": st(742.5, "W", "power", "Rack"),
+    "sensor.pot_b": st(1.2, "kW", "power", "Chuveiro"),
+    "sensor.energia": st(12.34, "kWh", "energy", "Casa"),
+    "sensor.bat": st(14, "%", "battery", "Sensor da porta"),
+    "sensor.ruido": st(58, "dB", "sound_pressure", "Sala"),
+    "sensor.morto": st("unavailable", "°C", "temperature", "Sensor caído"),
+    "binary_sensor.porta": st("on", null, "door", "Porta da sala"),
+    "binary_sensor.janela": st("off", null, "window", "Janela"),
+    "binary_sensor.ocup": st("on", null, "occupancy", "Escritório"),
+    "binary_sensor.mov": st("off", null, "motion", "Corredor"),
+  },
+  entities: {}, devices: {}, areas: {},
+  callService(...a) { console.log("callService", a); },
+};
+
+const FILAS = [
+  ["a mesma grandeza, três leituras — o papel É a leitura", [
+    ["mw-top-temperature-card", { entity: "sensor.t_frio", show_label: true }, "8,2 °C"],
+    ["mw-top-temperature-card", { entity: "sensor.t_bom", show_label: true }, "23,4 °C"],
+    ["mw-top-temperature-card", { entity: "sensor.t_quente", show_label: true }, "34,1 °C"],
+    ["mw-top-humidity-card", { entity: "sensor.umid_seca", show_label: true }, "28 %"],
+    ["mw-top-humidity-card", { entity: "sensor.umid", show_label: true }, "58 %"],
+    ["mw-top-co2-card", { entity: "sensor.co2_ok", show_label: true }, "520 ppm"],
+    ["mw-top-co2-card", { entity: "sensor.co2_ruim", show_label: true }, "1240 ppm"],
+  ]],
+  ["o pacote inteiro (quadrado de cantos arredondados)", [
+    ["mw-top-temperature-card", { entity: "sensor.t_bom" }, "temperatura"],
+    ["mw-top-humidity-card", { entity: "sensor.umid" }, "umidade"],
+    ["mw-top-door-window-card", { entity: "binary_sensor.porta" }, "porta aberta"],
+    ["mw-top-door-window-card", { entity: "binary_sensor.janela" }, "janela fechada"],
+    ["mw-top-occupancy-card", { entity: "binary_sensor.ocup" }, "ocupado"],
+    ["mw-top-motion-card", { entity: "binary_sensor.mov" }, "sem movimento"],
+    ["mw-top-illuminance-card", { entity: "sensor.lux" }, "luminosidade"],
+    ["mw-top-power-card", { entities: ["sensor.pot_a", "sensor.pot_b"] }, "potência (soma)"],
+    ["mw-top-energy-card", { entity: "sensor.energia" }, "consumo"],
+    ["mw-top-co2-card", { entity: "sensor.co2_ruim" }, "CO₂"],
+    ["mw-top-formaldehyde-card", { entity: "sensor.ch2o" }, "formaldeído"],
+    ["mw-top-voc-card", { entity: "sensor.voc" }, "COV"],
+    ["mw-top-pm25-card", { entity: "sensor.pm25" }, "PM2.5"],
+    ["mw-top-pm10-card", { entity: "sensor.pm10" }, "PM10"],
+    ["mw-top-aqi-card", { entity: "sensor.aqi" }, "qualidade do ar"],
+    ["mw-top-battery-card", { entity: "sensor.bat" }, "bateria"],
+    ["mw-top-noise-card", { entity: "sensor.ruido" }, "ruído"],
+    ["mw-top-temperature-card", { entity: "sensor.morto" }, "sensor caído"],
+  ]],
+  ["círculo, com rótulo", [
+    ["mw-top-temperature-card", { entity: "sensor.t_bom", shape: "circle", show_label: true }, "temperatura"],
+    ["mw-top-humidity-card", { entity: "sensor.umid", shape: "circle", show_label: true }, "umidade"],
+    ["mw-top-co2-card", { entity: "sensor.co2_ruim", shape: "circle", show_label: true }, "CO₂"],
+    ["mw-top-power-card", { entities: ["sensor.pot_a", "sensor.pot_b"], shape: "circle", show_label: true, name: "Sala" }, "soma"],
+    ["mw-top-occupancy-card", { entity: "binary_sensor.ocup", shape: "circle", show_label: true }, "ocupação"],
+    ["mw-top-battery-card", { entity: "sensor.bat", shape: "circle", show_label: true }, "bateria"],
+  ]],
+  ["os três níveis de 3D · e só o ícone", [
+    ["mw-top-co2-card", { entity: "sensor.co2_ruim", quality: "alta" }, "alta"],
+    ["mw-top-co2-card", { entity: "sensor.co2_ruim", quality: "equilibrada" }, "equilibrada"],
+    ["mw-top-co2-card", { entity: "sensor.co2_ruim", quality: "plana" }, "plana"],
+    ["mw-top-temperature-card", { entity: "sensor.t_quente", show_value: false }, "só ícone"],
+    ["mw-top-door-window-card", { entity: "binary_sensor.porta", shape: "circle" }, "só ícone"],
+    ["mw-top-humidity-card", { entity: "sensor.umid", show_icon: false }, "só número"],
+    ["mw-top-temperature-card", { entity: "sensor.t_bom", show_ring: false }, "sem anel"],
+    ["mw-top-temperature-card", { entity: "sensor.t_bom", paper_mode: "fixo", paper_color: "violet-3" }, "papel fixo"],
+  ]],
+];
+
+const tela = document.getElementById("tela");
+function desenha() {
+  tela.innerHTML = "";
+  for (const [titulo, itens] of FILAS) {
+    const h = document.createElement("h2"); h.textContent = titulo; tela.appendChild(h);
+    const fila = document.createElement("div"); fila.className = "fila"; tela.appendChild(fila);
+    for (const [tag, cfg, cap] of itens) {
+      const cel = document.createElement("div");
+      const el = document.createElement(tag);
+      el.setConfig({ type: `custom:${tag}`, ...cfg });
+      el.hass = hass;
+      cel.appendChild(el);
+      const c = document.createElement("div"); c.className = "cap"; c.textContent = cap;
+      cel.appendChild(c);
+      fila.appendChild(cel);
+    }
+  }
+}
+window.virar = () => {
+  hass.themes.darkMode = !hass.themes.darkMode;
+  document.body.classList.toggle("noite", hass.themes.darkMode);
+  desenha();
+};
+
+/* o pacote é um IIFE clássico: entra por <script>, não por import */
+const s = document.createElement("script");
+s.src = "../dist/mw-top-buttons-pack.js";
+s.onload = desenha;
+document.head.appendChild(s);
+</script>

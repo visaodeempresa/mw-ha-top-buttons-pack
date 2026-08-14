@@ -13,7 +13,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.1.0";
+  const VERSION = "0.1.1";
 
   // Leitura morta: a entidade existe mas não tem valor. Escrever "unavailable"
   // dentro de um botão de 90 px é ilegível e não informa nada — fica o
@@ -568,7 +568,7 @@
       const valuePct = Number(c.value_size) || (rows === 1 ? 34 : 26);
       const unitPct = Math.round(valuePct * 0.42);
       const labelPct = 10;
-      const pad = c.shape === "circle" ? 14 : 10;
+      const pad = c.shape === "circle" ? 19 : 10;
       const rim = q === "alta" ? `<div class="rim"></div>` : "";
       const ring = c.show_ring !== false ? `<div class="ring"></div>` : "";
       this._showValue = showValue;
@@ -607,16 +607,16 @@
           .vl{display:flex;align-items:baseline;justify-content:center;gap:0.25em;
             max-width:100%;line-height:1.02;}
           /* tabular-nums trava a largura do dígito: o número não dança a cada leitura */
-          .v{font-weight:700;color:var(--mw-accent);font-size:22px;letter-spacing:-0.02em;
+          .v{font-weight:700;color:var(--mw-accent);font-size:calc(22px * var(--mw-vk, 1));letter-spacing:-0.02em;
             font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
             text-shadow:var(--mw-text-shadow);transition:color .35s ease;}
-          .u{font-weight:600;color:var(--mw-accent);opacity:.7;font-size:10px;}
+          .u{font-weight:600;color:var(--mw-accent);opacity:.7;font-size:calc(10px * var(--mw-vk, 1));}
           .lb{font-weight:600;color:var(--mw-ink-dim);font-size:9px;letter-spacing:.02em;
             max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
           @supports (width:1cqi){
             .ic ha-icon{width:${iconPct}cqi;height:${iconPct}cqi;--mdc-icon-size:${iconPct}cqi;}
-            .v{font-size:${valuePct}cqi;}
-            .u{font-size:${unitPct}cqi;}
+            .v{font-size:calc(${valuePct}cqi * var(--mw-vk, 1));}
+            .u{font-size:calc(${unitPct}cqi * var(--mw-vk, 1));}
             .lb{font-size:${labelPct}cqi;}
           }
         </style>
@@ -680,6 +680,12 @@
         el.v.textContent = value;
         // sem leitura some também a unidade: "— °C" sugere um valor que não existe
         el.u.textContent = r.ok ? unit : "";
+        // «0,042 mg/m³» tem o dobro dos caracteres de «23,4 °C» e no mesmo corpo
+        // encostaria nas duas bordas. A unidade pesa menos que o número porque
+        // é desenhada menor. Piso em 0,5 para não virar letra de bula.
+        const carga = value.length + 0.55 * unit.length;
+        el.card.style.setProperty("--mw-vk",
+          String(Math.max(0.5, Math.min(1, 5.2 / Math.max(1, carga))).toFixed(3)));
       }
 
       if (this._showLabel) el.lb.textContent = this._label(r);
