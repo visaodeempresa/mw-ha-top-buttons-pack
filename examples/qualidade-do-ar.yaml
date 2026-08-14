@@ -1,0 +1,30 @@
+# Painel de qualidade do ar, em círculos, com rótulo por baixo do número.
+# Os limites (`stops`) são os padrões de cada grandeza — estão aqui explícitos
+# só para mostrar onde se mexe.
+type: grid
+columns: 5
+square: false
+cards:
+  - type: custom:mw-top-aqi-card
+    entity: sensor.purificador_aqi
+    shape: circle
+    show_label: true
+    stops: "50,100,150,200"
+  - type: custom:mw-top-pm25-card
+    entity: sensor.purificador_pm25
+    shape: circle
+    show_label: true
+    stops: "12,35,55,150"
+  - type: custom:mw-top-pm10-card
+    entity: sensor.purificador_pm10
+    shape: circle
+    show_label: true
+  - type: custom:mw-top-voc-card
+    entity: sensor.purificador_cov
+    shape: circle
+    show_label: true
+  - type: custom:mw-top-formaldehyde-card
+    entity: sensor.purificador_formaldeido
+    shape: circle
+    show_label: true
+    decimals: 3

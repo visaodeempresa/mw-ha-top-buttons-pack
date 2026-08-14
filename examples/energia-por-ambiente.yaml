@@ -1,0 +1,30 @@
+# Potência e consumo somados. Duas formas de dizer o que entra na conta:
+#
+#   entities: escolho na mão  ·  area: o HA resolve pelo registro
+#
+# No modo `area` o card converte as unidades antes de somar (W, kW, VA / Wh,
+# kWh, MWh), então misturar medidores de origens diferentes não mente.
+type: grid
+columns: 4
+square: false
+cards:
+  - type: custom:mw-top-power-card
+    area: sala
+    name: Sala
+    show_label: true
+  - type: custom:mw-top-power-card
+    entities:
+      - sensor.tomada_tv_potencia
+      - sensor.tomada_rack_potencia
+    name: Rack + TV
+    show_label: true
+    shape: circle
+  - type: custom:mw-top-energy-card
+    area: cozinha
+    name: Cozinha (hoje)
+    show_label: true
+  - type: custom:mw-top-energy-card
+    entity: sensor.consumo_total_hoje
+    name: Casa
+    show_label: true
+    quality: equilibrada

@@ -1,0 +1,15 @@
+# A fileira de topo mais curta que resolve: clima + ar + energia da sala.
+type: grid
+columns: 5
+square: false
+cards:
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sala_temperatura
+  - type: custom:mw-top-humidity-card
+    entity: sensor.sala_umidade
+  - type: custom:mw-top-co2-card
+    entity: sensor.sala_co2
+  - type: custom:mw-top-power-card
+    area: sala
+  - type: custom:mw-top-door-window-card
+    entity: binary_sensor.porta_da_sala

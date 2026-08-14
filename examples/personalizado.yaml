@@ -1,0 +1,37 @@
+# Tudo que dá para mexer, num card só — bom para copiar e podar.
+type: custom:mw-top-temperature-card
+entity: sensor.suite_temperatura
+name: Suíte
+icon: mdi:bed-outline
+
+# forma: quadrado de cantos arredondados (0..50 %) ou círculo
+shape: rounded
+corner: 26
+
+# 3D: alta | equilibrada | plana
+quality: alta
+
+# papel: acompanha o tema, ou travado em claro/escuro
+paper_theme: auto
+
+# a dinâmica: rampa de papel + limites das faixas
+paper_mode: dinamico
+ramp: frio_quente
+stops: "10,16,20,24,27,31"
+
+# o que aparece dentro do botão
+show_icon: true
+show_value: true
+show_unit: true
+show_label: true
+show_ring: true
+decimals: 1
+
+# ações — o padrão do pacote é «Nada» em todas
+tap_action:
+  action: more-info
+hold_action:
+  action: navigate
+  navigation_path: /reino-do-dende-5/suite
+double_tap_action:
+  action: none
