@@ -280,6 +280,27 @@ console.log("\n— ícone da grandeza vence o da entidade —");
     "o genérico é o único que herda o ícone da entidade");
 }
 
+console.log("\n— ícone como marca d'água —");
+{
+  const normal = build("mw-top-temperature-card", { entity: "sensor.sala_temp" });
+  const agua = build("mw-top-temperature-card", { entity: "sensor.sala_temp", icon_background: true });
+  check(!/class="wm"/.test(normal.shadowRoot.innerHTML), "sem a opção não pode nascer marca d'água");
+  check(/class="wm"/.test(agua.shadowRoot.innerHTML), "a marca d'água não foi desenhada");
+  check(!/class="ic"/.test(agua.shadowRoot.innerHTML),
+    "com marca d'água o ícone não pode aparecer TAMBÉM na coluna");
+  check(agua.shadowRoot.querySelector(".ic ha-icon").attrs.icon === "mdi:thermometer" ||
+        agua.shadowRoot.querySelector(".wm ha-icon").attrs.icon === "mdi:thermometer",
+    "a marca d'água tem que receber o ícone da grandeza");
+  const vAgua = /\.v\{[^}]*font-size:calc\(([\d.]+)cqi/.exec(agua.shadowRoot.innerHTML.replace(/\n/g, ""));
+  const vNorm = /\.v\{[^}]*font-size:calc\(([\d.]+)cqi/.exec(normal.shadowRoot.innerHTML.replace(/\n/g, ""));
+  check(vAgua && vNorm && +vAgua[1] > +vNorm[1],
+    `o valor tinha que crescer sem o ícone dividindo a altura (${vNorm && vNorm[1]} → ${vAgua && vAgua[1]})`);
+  check(/opacity:0.18/.test(agua.shadowRoot.innerHTML), "opacidade padrão da marca d'água");
+  check(/opacity:0.35/.test(build("mw-top-temperature-card",
+    { entity: "sensor.sala_temp", icon_background: true, icon_opacity: 0.35 }).shadowRoot.innerHTML),
+    "opacidade configurável");
+}
+
 console.log("\n— anel concêntrico —");
 {
   const el = build("mw-top-noise-card", { entity: "sensor.ruido", corner: 26 });

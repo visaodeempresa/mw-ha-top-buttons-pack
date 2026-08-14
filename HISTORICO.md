@@ -1,5 +1,14 @@
 # HISTÓRICO
 
+## 0.3.0 — 2026-08-14
+
+- **`icon_background`**: o ícone sai da coluna e vira **marca d'água** no fundo
+  do botão. O valor deixa de dividir a altura com ele e cresce (26 → 38 % do
+  lado), ficando sozinho e centrado — identidade preservada, sem poluir.
+  `icon_opacity` regula (padrão 0,18). Ideia do dono.
+- a marca d'água não leva sombra: sombra em algo com 18 % de opacidade vira
+  borrão, não relevo
+
 ## 0.2.2 — 2026-08-14
 
 - **o ícone da grandeza vence o da entidade**: o sensor «Temperatura da Sala de

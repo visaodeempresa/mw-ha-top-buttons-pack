@@ -171,6 +171,15 @@ const FILAS = [
     ["mw-top-occupancy-card", { entity: "binary_sensor.escritorio_ocupacao", shape: "circle", show_label: true }, "ocupação"],
     ["mw-top-battery-card", { entity: "sensor.porta_sensor_bateria", shape: "circle", show_label: true }, "bateria"],
   ]],
+  ["ícone como marca d'água — o valor fica sozinho e maior", [
+    ["mw-top-temperature-card", { entity: "sensor.sala_temperatura", icon_background: true }, "temperatura"],
+    ["mw-top-humidity-card", { entity: "sensor.sala_umidade", icon_background: true }, "umidade"],
+    ["mw-top-co2-card", { entity: "sensor.quarto_co2", icon_background: true }, "CO₂"],
+    ["mw-top-pm25-card", { entity: "sensor.sala_pm25", icon_background: true }, "PM2.5"],
+    ["mw-top-power-card", { entities: ["sensor.tomada_rack_potencia", "sensor.chuveiro_potencia"], icon_background: true }, "soma"],
+    ["mw-top-illuminance-card", { entity: "sensor.varanda_luminosidade", icon_background: true }, "1800 lx"],
+    ["mw-top-temperature-card", { entity: "sensor.sala_temperatura", icon_background: true, icon_opacity: 0.4 }, "opacidade 0,4"],
+  ]],
   ["os três níveis de 3D · e só o ícone", [
     ["mw-top-co2-card", { entity: "sensor.quarto_co2", quality: "alta" }, "alta"],
     ["mw-top-co2-card", { entity: "sensor.quarto_co2", quality: "equilibrada" }, "equilibrada"],

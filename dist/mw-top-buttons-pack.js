@@ -13,7 +13,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.2.2";
+  const VERSION = "0.3.0";
 
   // Leitura morta: a entidade existe mas não tem valor. Escrever "unavailable"
   // dentro de um botão de 90 px é ilegível e não informa nada — fica o
@@ -504,6 +504,8 @@
     show_unit: true,
     show_label: false,
     show_ring: true,
+    icon_background: false,    // ícone vira marca d'água e o valor fica sozinho
+    icon_opacity: 0.18,
     intensity: null,           // null = o alcance padrão da rampa
     icon_size: null,           // % do lado; null = automático
     value_size: null,
@@ -754,12 +756,16 @@
         ? !k.binary : c.show_value !== false;
       const showIcon = c.show_icon !== false;
       const showLabel = c.show_label === true;
-      const rows = (showIcon ? 1 : 0) + (showValue ? 1 : 0) + (showLabel ? 1 : 0);
+      // Marca d'água: o ícone sai da coluna e vira fundo. O valor deixa de
+      // dividir a altura com ele e passa a ter o botão inteiro — que é o
+      // ponto: número grande, identidade preservada, sem poluir.
+      const marca = c.icon_background === true && showIcon;
+      const rows = (showIcon && !marca ? 1 : 0) + (showValue ? 1 : 0) + (showLabel ? 1 : 0);
       // O ícone cresce quando é o único morador do botão. Tamanhos em `cqi`
       // (1% da largura do container): o botão fica proporcional em qualquer
       // grade sem uma linha de JS de medição.
-      const iconPct = Number(c.icon_size) || (rows === 1 ? 46 : showValue ? 26 : 34);
-      const valuePct = Number(c.value_size) || (rows === 1 ? 34 : 26);
+      const iconPct = Number(c.icon_size) || (marca ? 64 : rows === 1 ? 46 : showValue ? 26 : 34);
+      const valuePct = Number(c.value_size) || (marca ? 38 : rows === 1 ? 34 : 26);
       const unitPct = Math.round(valuePct * 0.42);
       const labelPct = 10;
       // No círculo o conteúdo mora no quadrado inscrito (70,7 % do diâmetro),
@@ -767,6 +773,8 @@
       // rótulo os 19 % deixavam o rótulo encostar na curva e ser cortado.
       const pad = c.shape === "circle" ? (rows >= 3 ? 13 : 19) : 10;
       const rim = q === "alta" ? `<div class="rim"></div>` : "";
+      const agua = marca ? `<div class="wm"><ha-icon></ha-icon></div>` : "";
+      const opac = Number.isFinite(Number(c.icon_opacity)) ? Number(c.icon_opacity) : 0.18;
       const ring = c.show_ring !== false ? `<div class="ring"></div>` : "";
       this._showValue = showValue;
       this._showLabel = showLabel;
@@ -799,6 +807,12 @@
             align-items:center;justify-content:center;text-align:center;
             width:100%;height:100%;padding:${pad}%;box-sizing:border-box;gap:2%;}
           .ic{display:flex;align-items:center;justify-content:center;line-height:0;flex:none;}
+          /* marca d'água: mesma tinta do valor, só que apagada e por baixo.
+             Sem sombra — sombra em algo com 18 % de opacidade vira borrão. */
+          .wm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+            pointer-events:none;z-index:0;}
+          .wm ha-icon{display:block;color:var(--mw-accent);opacity:${opac};
+            width:34px;height:34px;--mdc-icon-size:34px;transition:color .35s ease;}
           .ic ha-icon{display:block;color:var(--mw-accent);filter:var(--mw-icon-shadow);
             width:34px;height:34px;--mdc-icon-size:34px;transition:color .35s ease;}
           .vl{display:flex;align-items:baseline;justify-content:center;gap:0.25em;
@@ -811,16 +825,16 @@
           .lb{font-weight:600;color:var(--mw-ink-dim);font-size:9px;letter-spacing:.02em;
             max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
           @supports (width:1cqi){
-            .ic ha-icon{width:${iconPct}cqi;height:${iconPct}cqi;--mdc-icon-size:${iconPct}cqi;}
+            .ic ha-icon,.wm ha-icon{width:${iconPct}cqi;height:${iconPct}cqi;--mdc-icon-size:${iconPct}cqi;}
             .v{font-size:calc(${valuePct}cqi * var(--mw-vk, 1));}
             .u{font-size:calc(${unitPct}cqi * var(--mw-vk, 1));}
             .lb{font-size:${labelPct}cqi;}
           }
         </style>
         <ha-card>
-          ${rim}${ring}
+          ${rim}${ring}${agua}
           <div class="ct">
-            ${showIcon ? `<div class="ic"><ha-icon></ha-icon></div>` : ""}
+            ${showIcon && !marca ? `<div class="ic"><ha-icon></ha-icon></div>` : ""}
             ${showValue ? `<div class="vl"><span class="v"></span><span class="u"></span></div>` : ""}
             ${showLabel ? `<div class="lb"></div>` : ""}
           </div>
@@ -828,12 +842,13 @@
 
       this._el = {
         card: this.shadowRoot.querySelector("ha-card"),
-        icon: this.shadowRoot.querySelector(".ic ha-icon"),
+        icon: this.shadowRoot.querySelector(".ic ha-icon") || this.shadowRoot.querySelector(".wm ha-icon"),
         v: this.shadowRoot.querySelector(".v"),
         u: this.shadowRoot.querySelector(".u"),
         lb: this.shadowRoot.querySelector(".lb"),
       };
       this._quality = q;
+      this._marca = marca;
       this._wire();
       this._built = true;
     }
@@ -894,7 +909,7 @@
         // «0,042 mg/m³» tem o dobro dos caracteres de «23,4 °C» e no mesmo corpo
         // encostaria nas duas bordas. A unidade pesa menos que o número porque
         // é desenhada menor. Piso em 0,5 para não virar letra de bula.
-        const carga = value.length + 0.55 * unit.length;
+        const carga = (value.length + 0.55 * unit.length) * (this._marca ? 0.82 : 1);
         el.card.style.setProperty("--mw-vk",
           String(Math.max(0.5, Math.min(1, 5.2 / Math.max(1, carga))).toFixed(3)));
       }
@@ -1022,6 +1037,8 @@
     show_unit: "Mostrar unidade",
     show_label: "Mostrar rótulo",
     show_ring: "Anel de estado na borda",
+    icon_background: "Ícone como marca d'água (o valor fica sozinho e maior)",
+    icon_opacity: "Opacidade da marca d'água",
     intensity: "Alcance da intensidade (quanto o estado escurece/acende o papel)",
     icon_size: "Tamanho do ícone (% do lado)",
     value_size: "Tamanho do valor (% do lado)",
@@ -1164,6 +1181,10 @@
       look.push(
         { name: "show_label", selector: { boolean: {} } },
         { name: "show_ring", selector: { boolean: {} } },
+        { name: "icon_background", selector: { boolean: {} } },
+        ...(c.icon_background === true
+          ? [{ name: "icon_opacity", selector: { number: { min: 0.02, max: 0.6, step: 0.01, mode: "slider" } } }]
+          : []),
         { name: "icon_size", selector: { number: { min: 8, max: 70, step: 1, mode: "box", unit_of_measurement: "%" } } },
         { name: "value_size", selector: { number: { min: 8, max: 60, step: 1, mode: "box", unit_of_measurement: "%" } } },
       );

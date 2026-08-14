@@ -293,6 +293,39 @@ cards:
     show_label: true
 ```
 
+### Ícone como marca d'água — o valor fica sozinho e maior
+
+```yaml
+type: grid
+columns: 7
+square: false
+cards:
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sala_temperatura
+    icon_background: true
+  - type: custom:mw-top-humidity-card
+    entity: sensor.sala_umidade
+    icon_background: true
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    icon_background: true
+  - type: custom:mw-top-pm25-card
+    entity: sensor.sala_pm25
+    icon_background: true
+  - type: custom:mw-top-power-card
+    entities:
+      - sensor.tomada_rack_potencia
+      - sensor.chuveiro_potencia
+    icon_background: true
+  - type: custom:mw-top-illuminance-card
+    entity: sensor.varanda_luminosidade
+    icon_background: true
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sala_temperatura
+    icon_background: true
+    icon_opacity: 0.4
+```
+
 ### Os três níveis de 3D · e só o ícone
 
 ```yaml
