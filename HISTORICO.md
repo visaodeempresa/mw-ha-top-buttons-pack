@@ -1,5 +1,12 @@
 # HISTÓRICO
 
+## 0.2.2 — 2026-08-14
+
+- **o ícone da grandeza vence o da entidade**: o sensor «Temperatura da Sala de
+  TV» carrega `icon: mdi:television`, e o botão de temperatura saía com uma
+  televisão desenhada. Só o card genérico — que não tem grandeza própria —
+  continua herdando o ícone da entidade
+
 ## 0.2.1 — 2026-08-14
 
 - **Galeria no README**: as duas imagens (papel de dia e de noite) e todo o

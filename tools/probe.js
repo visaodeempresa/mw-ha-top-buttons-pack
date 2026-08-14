@@ -264,6 +264,22 @@ console.log("\n— sensores teimosos (a casa do dono) —");
     `COV 0,4 ppm devia mostrar "0,40": ${voc.shadowRoot.querySelector(".v").textContent}`);
 }
 
+console.log("\n— ícone da grandeza vence o da entidade —");
+{
+  // «Temperatura da Sala de TV» traz icon=mdi:television nos atributos; um
+  // botão de temperatura com uma TV desenhada não se lê
+  const h2 = { ...hass, states: { ...hass.states,
+    "sensor.sala_temp": { state: "23.4", attributes: { unit_of_measurement: "°C", icon: "mdi:television" } } } };
+  const el = new reg["mw-top-temperature-card"]();
+  el.setConfig({ entity: "sensor.sala_temp" }); el.hass = h2;
+  const ic = el.shadowRoot.querySelector(".ic ha-icon").attrs.icon;
+  check(ic === "mdi:thermometer", `esperava mdi:thermometer, veio ${ic}`);
+  const g = new reg["mw-top-button-card"]();
+  g.setConfig({ kind: "generic", entity: "sensor.sala_temp" }); g.hass = h2;
+  check(g.shadowRoot.querySelector(".ic ha-icon").attrs.icon === "mdi:television",
+    "o genérico é o único que herda o ícone da entidade");
+}
+
 console.log("\n— anel concêntrico —");
 {
   const el = build("mw-top-noise-card", { entity: "sensor.ruido", corner: 26 });

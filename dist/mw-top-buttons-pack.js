@@ -13,7 +13,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.2.1";
+  const VERSION = "0.2.2";
 
   // Leitura morta: a entidade existe mas não tem valor. Escrever "unavailable"
   // dentro de um botão de 90 px é ilegível e não informa nada — fica o
@@ -422,7 +422,8 @@
       stops: [35, 45, 55, 70], ramp: "bom_ruim",
     },
     generic: {
-      label: "Sensor (genérico)", card: "Sensor", icon: "mdi:gauge",
+      // sem `icon`: o genérico é o único que herda o ícone da entidade
+      label: "Sensor (genérico)", card: "Sensor", iconFallback: "mdi:gauge",
       domain: ["sensor", "binary_sensor", "input_number", "number", "counter"],
       unit: "", dec: 1, stops: [20, 40, 60, 80], ramp: "bom_ruim",
     },
@@ -855,9 +856,13 @@
         q === "plana" || ESCURO(skin.L) ? "none" : "0 1px 0 rgba(255,255,255,0.55)");
 
       if (el.icon) {
+        // O ícone da GRANDEZA vence o da entidade. Parece detalhe e não é: o
+        // sensor «Temperatura da Sala de TV» carrega o ícone de televisão, e
+        // um botão de temperatura com uma TV desenhada não se lê. Só o
+        // genérico — que não tem grandeza própria — herda o ícone da entidade.
         let icon = c.icon;
         if (!icon && k.binary) icon = r.ok ? (r.on ? k.on.icon : k.off.icon) : k.icon;
-        if (!icon) icon = this._entityIcon() || k.icon;
+        if (!icon) icon = k.icon || this._entityIcon() || k.iconFallback;
         el.icon.setAttribute("icon", r.ok ? icon : (c.icon_unavailable || "mdi:help-rhombus-outline"));
       }
 
