@@ -44,15 +44,22 @@ editor visual completo, todos 1:1 (largura = altura), todos com ação padrão
 
 ## O que ele faz de diferente
 
-**O papel segue o estado.** Não é enfeite fixo: o fundo é a leitura traduzida
-em papel. 23 °C dá papel verde, 34 °C dá papel vermelho, CO₂ em 1240 ppm dá
-papel laranja. A rampa de cor e os limites das faixas são configuráveis no
-editor — sem YAML, sem template.
+**O fundo é o estado — e a intensidade dele.** Não é enfeite fixo: a matiz diz
+*o quê* (verde = bom, vermelho = ruim) e o tom diz *quanto*. Quarto no breu dá
+papel escuro; varanda ao sol dá papel quase branco. CO₂ em 500 ppm é um verde
+calmo; em 1500 ppm é um vermelho encardido. Cada grandeza já nasce com rampa,
+limites e alcance próprios — e tudo é editável.
 
-**Temperatura e umidade obedecem à escala canônica da casa** (a mesma dos
-`custom:button-card` dos dashboards). Ela vive no **anel** da borda, não no
-número: amarelo puro de 25 °C é ilegível como texto sobre papel claro, mas num
-anel fino é exatamente o sinal certo.
+**A exceção são os estados conhecidos.** Porta/janela, ocupação e movimento não
+têm gradação: aberta é **verde**, fechada é **vermelho**, e pronto — a mesma
+convenção dos outros componentes MW da casa. Sensor que não respondeu ganha um
+vermelho que se nota sem gritar.
+
+**Temperatura e umidade usam a escala canônica da casa** (a mesma dos
+`custom:button-card` dos dashboards): a **matiz** vem inteira da escala, e só a
+saturação e a luminosidade são trazidas para a faixa do papel. Chapada, a
+escala vira néon — 25 °C nela é amarelo puro. Amansada, continua sendo a escala
+e volta a ser papel. A cor crua da escala fica no **anel** da borda.
 
 **Potência e consumo somam.** Escolha as entidades **ou** um ambiente inteiro —
 no ambiente, o card resolve sozinho quem entra na conta pelo registro do HA
@@ -63,8 +70,9 @@ as unidades** antes de somar: 742,5 W + 1,2 kW = 1,9 kW, não 743,7.
 quiser, ligue toque / toque longo / toque duplo com o seletor de ação padrão do
 HA (more-info, navegar, chamar ação, URL…).
 
-**Papel claro e papel de noite.** Acompanha o tema do HA por padrão; dá para
-travar num dos dois.
+**Seis papéis, não dois.** Acompanha o tema do HA por padrão, ou trava em um
+dos cinco degraus: papel de dia · dia puxado para o escuro · meio do caminho ·
+noite puxado para o claro · papel de noite.
 
 ## Instalação
 
@@ -133,12 +141,13 @@ Mais receitas em [`examples/`](examples/).
 | `shape` | `rounded` | `rounded` (quadrado de cantos arredondados) ou `circle` |
 | `corner` | `26` | arredondamento, em % do lado |
 | `quality` | `alta` | `alta` · `equilibrada` · `plana` — ver *Desempenho* |
-| `paper_theme` | `auto` | `auto` (segue o tema) · `claro` · `escuro` |
+| `paper_theme` | `auto` | `auto` (segue o tema do HA) · `claro` · `claro-medio` · `medio` · `escuro-medio` · `escuro` |
 | `paper_mode` | `dinamico` | `dinamico` (muda com o estado) ou `fixo` |
 | `paper_color` | `paper` | o papel, no modo fixo (49 tons + creme) |
 | `paper_on` / `paper_off` | por grandeza | o papel de cada estado, nas grandezas liga/desliga |
 | `ramp` | por grandeza | rampa de papel: `frio_quente`, `seco_umido`, `bom_ruim`, `ruim_bom`, `escuro_claro`, `vazio_cheio`, `neutro` |
 | `stops` | por grandeza | limites das faixas: `"600,800,1000,1500"` |
+| `intensity` | por rampa | 0–100 %: quanto o estado escurece ou acende o papel além da matiz |
 | `unit` | a da entidade | unidade mostrada |
 | `decimals` | automático | casas decimais (≥ 100 arredonda sozinho) |
 | `show_icon` / `show_value` / `show_unit` / `show_label` / `show_ring` | `true`/`true`/`true`/`false`/`true` | o que aparece |
@@ -148,7 +157,20 @@ Mais receitas em [`examples/`](examples/).
 
 Os limites padrão de cada grandeza (`stops`) saem de referências públicas
 (CO₂ ASHRAE/Anvisa, PM2.5 e AQI da EPA) e são **ponto de partida** — o editor
-existe justamente para você ajustar à sua casa.
+existe justamente para você ajustar à sua casa. Quando a unidade muda, os
+limites mudam junto: COV em `ppm` não usa os mesmos números do COV em `ppb`.
+
+## Sensores teimosos
+
+Nem toda integração declara `device_class`. Tuya, por exemplo, entrega COV em
+`ppm`, formaldeído em `mg/m³` e PM2.5 **sem unidade nenhuma** — um seletor que
+filtrasse só por `device_class` devolveria lista vazia num sensor que existe e
+funciona. Por isso o editor procura em cascata: **classe → unidade → nome em
+pt-BR**, e só cai no domínio inteiro se as três falharem.
+
+E há sensor que devolve palavra em vez de número: o purificador diz `great`.
+O card de qualidade do ar traduz (`Ótima`, `Boa`, `Média`, `Ruim`, `Péssima`) e
+usa a palavra para escolher o papel.
 
 ## Desempenho
 

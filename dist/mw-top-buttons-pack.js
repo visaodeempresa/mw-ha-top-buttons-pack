@@ -13,7 +13,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.1.1";
+  const VERSION = "0.2.0";
 
   // Leitura morta: a entidade existe mas não tem valor. Escrever "unavailable"
   // dentro de um botão de 90 px é ilegível e não informa nada — fica o
@@ -139,52 +139,154 @@
   };
   // <<< mw-climate-scale v1
 
-  /* ---------------- papel: claro/escuro, matiz e tinta de destaque ------- */
+  /* ---------------- papel: uma superfície contínua ----------------------- */
 
-  const paperOf = (key, dark) => (dark ? paperDarkGradient(key) : paperGradient(key));
-  const paperOptionsFor = (dark) => (dark ? paperDarkOptions() : paperOptions());
+  // O papel do pacote é a MESMA rampa canônica embutida acima, só que contínua
+  // em dois eixos:
+  //   nivel  0..1  intensidade do estado — 0 = calmo/aceso, 1 = alarme/apagado
+  //   tom    0..1  claridade do papel     — 0 = papel de dia, 1 = papel de noite
+  // Em tom 0, `nivel = k/6` devolve exatamente o papel `<matiz>-<k+1>` da rampa
+  // clara; em tom 1, o da rampa escura. Os três meios-termos que o dono pediu
+  // (claro-médio, médio, escuro-médio) são a interpolação entre as duas — não
+  // uma terceira tabela para manter em sincronia.
+  const HUE_OF = {};
+  for (const h of PAPER_HUES) HUE_OF[h[0]] = h[2];
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const luma = (r, g, b) => (0.299 * r + 0.587 * g + 0.114 * b) / 2.55;
 
-  const paperHue = (key) => {
-    const m = /^([a-z]+)-([1-7])$/.exec(String(key || "").trim());
-    const h = m && PAPER_HUES.find((x) => x[0] === m[1]);
-    return h ? h[2] : null;
+  const CREME = [[253, 250, 243], [232, 227, 216]];
+  const GRAFITE = [[43, 40, 37], [22, 20, 17]];
+  const mixRgb = (a, b, t) => a.map((c, i) => Math.round(lerp(c, b[i], t)));
+
+  // Devolve { bg, L }: o fundo e a luminosidade do papel resultante. É o L que
+  // decide a tinta — nada aqui adivinha contraste.
+  const paperSurface = (hueName, nivel, tom) => {
+    const k = Math.max(0, Math.min(6, Math.round(nivel * 6)));
+    if (!hueName || HUE_OF[hueName] === undefined) {
+      // sem matiz: creme ↔ grafite, com o nível dando só uma encardida
+      const d = 1 - nivel * 0.07;
+      const st = (i) => mixRgb(CREME[i], GRAFITE[i], tom).map((c) => Math.round(c * d));
+      const a = st(0), b = st(1);
+      return {
+        bg: `linear-gradient(145deg, rgb(${a.join(", ")}), rgb(${b.join(", ")}))`,
+        L: luma(a[0], a[1], a[2]),
+      };
+    }
+    const h = HUE_OF[hueName];
+    const [lL, lS] = PAPER_TONES[k];
+    const [dL, dS] = PAPER_DARK_TONES[k];
+    const L = lerp(lL, dL, tom), S = lerp(lS, dS, tom);
+    const L2 = lerp(lL - 7, Math.max(4, dL - 6), tom), S2 = lerp(lS + 4, dS + 6, tom);
+    return {
+      bg: `linear-gradient(145deg, hsl(${h}, ${S.toFixed(1)}%, ${L.toFixed(1)}%), hsl(${h}, ${S2.toFixed(1)}%, ${L2.toFixed(1)}%))`,
+      L,
+    };
   };
-  // A tinta de destaque (número e ícone) sai da MESMA matiz do papel, só que
-  // saturada e no extremo oposto de luminosidade. Assim o botão nunca precisa
-  // de uma segunda tabela de cores para combinar consigo mesmo — e o contraste
-  // é garantido por construção, não por sorte.
-  const accentOf = (key, dark) => {
-    const h = paperHue(key);
-    if (h === null) return dark ? "rgba(247, 244, 236, 0.92)" : "rgba(28, 25, 20, 0.90)";
-    return dark ? `hsl(${h}, 62%, 70%)` : `hsl(${h}, 72%, 29%)`;
+
+  // Temperatura e umidade não escolhem matiz: o papel **é** a escala canônica
+  // da casa (regra global 40), pousada como camada sobre o papel neutro. Duas
+  // camadas de fundo em vez de uma cor chapada — assim o papel continua papel,
+  // com o mesmo degradê de 145°, e a escala continua sendo a escala.
+  const rgbOf = (str) => {
+    const m = /(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(String(str || ""));
+    return m ? [+m[1], +m[2], +m[3]] : null;
+  };
+  const rgb2hsl = (r, g, b) => {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    const l = (mx + mn) / 2;
+    if (!d) return [0, 0, l * 100];
+    const s = d / (1 - Math.abs(2 * l - 1));
+    const h = mx === r ? ((g - b) / d + (g < b ? 6 : 0))
+      : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h * 60, s * 100, l * 100];
   };
 
-  // Rampas de papel: a lista de papéis por onde o botão caminha conforme o
-  // estado. O número de faixas vem dos limites (`stops`) do card — a rampa é
-  // reamostrada para caber, então mudar os limites não exige mexer na rampa.
+  // A escala canônica foi feita para pintar área com força total: 25 °C nela é
+  // amarelo PURO. Chapada num botão de 90 px vira néon, e néon não é papel.
+  // Aqui a MATIZ — que é o que a regra 40 realmente define — passa intacta, e
+  // só a saturação e a luminosidade são trazidas para a faixa do papel. O tom
+  // relativo da escala sobrevive (2 °C continua mais escuro que 25 °C), então
+  // a intensidade continua se lendo no fundo.
+  const paperTinted = (rgb, tom) => {
+    const [h, s0, l0] = rgb2hsl(rgb[0], rgb[1], rgb[2]);
+    const S = Math.min(s0, lerp(52, 46, tom));
+    const L = lerp(lerp(32, 88, l0 / 100), lerp(9, 34, l0 / 100), tom);
+    const L2 = Math.max(4, L - lerp(7, 6, tom));
+    return {
+      bg: `linear-gradient(145deg, hsl(${h.toFixed(0)}, ${S.toFixed(1)}%, ${L.toFixed(1)}%), hsl(${h.toFixed(0)}, ${(S + lerp(4, 6, tom)).toFixed(1)}%, ${L2.toFixed(1)}%))`,
+      L,
+    };
+  };
+
+  // Tinta e destaque saem do L do papel, não do tema: um papel vermelho escuro
+  // no tema claro pede letra clara igual, e a conta é a mesma.
+  const ESCURO = (L) => L < 52;
+  const inkOn = (L) => paperInk(ESCURO(L));
+  const accentOn = (hueName, L) => {
+    const h = HUE_OF[hueName];
+    if (h === undefined) return ESCURO(L) ? "rgba(247, 244, 236, 0.94)" : "rgba(28, 25, 20, 0.90)";
+    return ESCURO(L) ? `hsl(${h}, 62%, 74%)` : `hsl(${h}, 74%, 27%)`;
+  };
+
+  // Opções de papel para um lado de um estado binário: a primeira é o padrão
+  // da grandeza (verde para aberta, vermelho para fechada), e só depois vêm os
+  // 49 papéis, para quem quiser fugir da convenção da casa.
+  const NOME_MATIZ = {};
+  for (const h of PAPER_HUES) NOME_MATIZ[h[0]] = h[1];
+  const paperEstadoOptions = (lado) => [{
+    value: "",
+    label: `Padrão da grandeza (${(NOME_MATIZ[lado.hue] || "neutro").toLowerCase()} · intensidade ${Math.round(lado.nivel * 6) + 1})`,
+  }].concat(paperOptions());
+
+  // Rampas: a matiz conta **o quê** (verde = bom, vermelho = ruim) e o nível
+  // conta **quanto** — que é a regra do dono: o fundo é o estado E a
+  // intensidade dele. `dir` diz para que lado o valor alto empurra o nível:
+  //   "up"   valor alto = mais intenso/encardido (poluente, consumo, ruído)
+  //   "down" valor alto = mais aceso/claro (luminosidade, bateria)
+  // `alcance` é o quanto o nível pode empurrar o próprio TOM do papel, além da
+  // matiz. Sem ele a rampa clara varia só 12 pontos de luminosidade (97 → 85) e
+  // «quarto no breu» fica quase igual a «quarto aceso» — que é justamente o que
+  // o dono não quer. Com alcance 0,55, o breu vai parar em L≈44: escuro de
+  // verdade, no tema claro. Estado conhecido (porta, ocupação) não usa isto —
+  // lá o papel é fixo por estado, de propósito.
   const RAMPS = {
-    frio_quente: ["indigo-5", "blue-4", "blue-2", "green-2", "yellow-2", "orange-3", "red-5"],
-    seco_umido: ["red-4", "orange-3", "yellow-2", "green-2", "blue-2", "blue-4", "indigo-5"],
-    bom_ruim: ["green-1", "green-2", "yellow-3", "orange-4", "red-6"],
-    ruim_bom: ["red-6", "orange-4", "yellow-3", "green-2", "green-1"],
-    escuro_claro: ["indigo-6", "indigo-4", "blue-2", "yellow-3", "yellow-1"],
-    vazio_cheio: ["red-5", "orange-4", "yellow-3", "green-2", "green-1"],
-    neutro: ["paper"],
+    bom_ruim: { hues: ["green", "green", "yellow", "orange", "red"], dir: "up", alcance: 0.28 },
+    ruim_bom: { hues: ["red", "orange", "yellow", "green", "green"], dir: "down", alcance: 0.28 },
+    escuro_claro: { hues: ["indigo", "indigo", "blue", "yellow", "yellow"], dir: "down", alcance: 0.55 },
+    claro_escuro: { hues: ["yellow", "yellow", "blue", "indigo", "indigo"], dir: "up", alcance: 0.55 },
+    vazio_cheio: { hues: ["red", "orange", "yellow", "green", "green"], dir: "down", alcance: 0.3 },
+    frio_quente: { hues: ["indigo", "blue", "green", "yellow", "orange", "red", "red"], dir: "up", alcance: 0.25 },
+    seco_umido: { hues: ["red", "orange", "yellow", "green", "blue", "blue", "indigo"], dir: "up", alcance: 0.25 },
+    neutro: { hues: [], dir: "up", alcance: 0.35 },
   };
   const RAMP_LABELS = {
+    bom_ruim: "Bom → ruim (verde · amarelo · laranja · vermelho, escurecendo)",
+    ruim_bom: "Ruim → bom (vermelho · amarelo · verde, clareando)",
+    escuro_claro: "Escuro → claro (anil · azul · amarelo, acendendo)",
+    claro_escuro: "Claro → escuro (amarelo · azul · anil, apagando)",
+    vazio_cheio: "Vazio → cheio (vermelho · amarelo · verde, clareando)",
     frio_quente: "Frio → quente (anil · azul · verde · amarelo · vermelho)",
     seco_umido: "Seco → úmido (vermelho · amarelo · verde · azul)",
-    bom_ruim: "Bom → ruim (verde · amarelo · laranja · vermelho)",
-    ruim_bom: "Ruim → bom (vermelho · laranja · amarelo · verde)",
-    escuro_claro: "Escuro → claro (anil · azul · amarelo)",
-    vazio_cheio: "Vazio → cheio (vermelho · amarelo · verde)",
-    neutro: "Neutro (papel original, sem dinâmica)",
+    neutro: "Neutro (papel sem matiz, só a intensidade)",
   };
-  const rampKey = (name, i, n) => {
+  const rampPaper = (name, banda, n) => {
     const r = RAMPS[name] || RAMPS.bom_ruim;
-    if (r.length === 1 || n <= 1) return r[0];
-    return r[Math.round((i * (r.length - 1)) / (n - 1))];
+    const f = n <= 1 ? 0 : banda / (n - 1);
+    const hue = r.hues.length
+      ? r.hues[Math.min(r.hues.length - 1, Math.round(f * (r.hues.length - 1)))]
+      : null;
+    return { hue, nivel: r.dir === "down" ? 1 - f : f, alcance: r.alcance ?? 0.28 };
   };
+
+  // O nível empurra o tom para o lado que ele já está indo: nível alto escurece
+  // o papel claro, nível baixo clareia o papel de noite. Simétrico de
+  // propósito — o botão tem que ler «aceso/apagado» nos dois temas.
+  const tomComNivel = (tom, nivel, alcance) => {
+    const puxa = alcance * (2 * nivel - 1) * (nivel > 0.5 ? 1 - tom : tom);
+    return Math.max(0, Math.min(1, tom + puxa));
+  };
+
   // Faixa do valor: índice da primeira parada não ultrapassada (igual ao
   // algoritmo do button-card e da escala de clima).
   const bandOf = (v, stops) => {
@@ -194,106 +296,143 @@
 
   /* ---------------- as grandezas do pacote ------------------------------- */
 
-  // dc     device_class aceitos (filtro do seletor e da soma por ambiente)
-  // stops  limites padrão das faixas, na unidade canônica da grandeza
-  // ramp   rampa de papel padrão
-  // sum    "power" | "energy" — grandeza que se soma (entidades ou ambiente)
-  // binary estado liga/desliga em vez de número
+  // dc      device_class aceitos (o filtro preferido do editor)
+  // units   unidades que também servem, quando a integração não põe device_class
+  // words   pedaço do nome, em pt-BR, para o editor achar o sensor teimoso
+  // escala  "temp" | "hum" — o papel É a escala canônica da casa (regra 40)
+  // ramp    matiz + direção da intensidade quando não há escala canônica
+  // stops   limites padrão; stopsByUnit troca os limites conforme a unidade
+  // sum     "power" | "energy" — grandeza que se soma (entidades ou ambiente)
+  // binary  estado liga/desliga: papel próprio de cada lado, sem rampa
+  // texts   estado textual (o purificador diz "great", não um número)
   const KINDS = {
     temperature: {
       label: "Temperatura", card: "Temperatura", icon: "mdi:thermometer",
-      domain: ["sensor"], dc: ["temperature"], unit: "°C", dec: 1,
+      domain: ["sensor"], dc: ["temperature"], units: ["°c", "°f", "k"],
+      words: /temperat/i, unit: "°C", dec: 1, escala: "temp",
       stops: [10, 16, 20, 24, 27, 31], ramp: "frio_quente",
-      accent: (v) => mwClimateColor("temp", v, 1),
     },
     humidity: {
       label: "Umidade", card: "Umidade", icon: "mdi:water-percent",
-      domain: ["sensor"], dc: ["humidity"], unit: "%", dec: 0,
+      domain: ["sensor"], dc: ["humidity"], units: ["%"],
+      words: /umidade|humid/i, unit: "%", dec: 0, escala: "hum",
       stops: [25, 35, 45, 55, 65, 75], ramp: "seco_umido",
-      accent: (v) => mwClimateColor("hum", v, 1),
     },
     door_window: {
       label: "Porta / Janela", card: "Porta / Janela", icon: "mdi:door",
-      domain: ["binary_sensor"], dc: ["door", "window", "garage_door", "opening"], binary: true,
-      on: { icon: "mdi:door-open", text: "Aberta", paper: "orange-3" },
-      off: { icon: "mdi:door-closed", text: "Fechada", paper: "green-2" },
+      domain: ["binary_sensor"], dc: ["door", "window", "garage_door", "opening"],
+      words: /porta|janela|portao|portão|door|window/i, binary: true,
+      on: { icon: "mdi:door-open", text: "Aberta", hue: "green", nivel: 0.45 },
+      off: { icon: "mdi:door-closed", text: "Fechada", hue: "red", nivel: 0.5 },
     },
     occupancy: {
       label: "Ocupação Humana", card: "Ocupação", icon: "mdi:home-account",
-      domain: ["binary_sensor"], dc: ["occupancy", "presence"], binary: true,
-      on: { icon: "mdi:home-account", text: "Ocupado", paper: "yellow-2" },
-      off: { icon: "mdi:home-outline", text: "Livre", paper: "blue-1" },
+      domain: ["binary_sensor"], dc: ["occupancy", "presence"],
+      words: /ocupa|presen/i, binary: true,
+      on: { icon: "mdi:home-account", text: "Ocupado", hue: "orange", nivel: 0.5 },
+      off: { icon: "mdi:home-outline", text: "Livre", hue: "blue", nivel: 0.2 },
     },
     motion: {
       label: "Movimento", card: "Movimento", icon: "mdi:motion-sensor",
-      domain: ["binary_sensor"], dc: ["motion", "moving", "vibration"], binary: true,
-      on: { icon: "mdi:motion-sensor", text: "Movimento", paper: "orange-2" },
-      off: { icon: "mdi:motion-sensor-off", text: "Parado", paper: "blue-1" },
+      domain: ["binary_sensor"], dc: ["motion", "moving", "vibration"],
+      words: /movimento|motion|vibra/i, binary: true,
+      on: { icon: "mdi:motion-sensor", text: "Movimento", hue: "orange", nivel: 0.55 },
+      off: { icon: "mdi:motion-sensor-off", text: "Parado", hue: "blue", nivel: 0.2 },
     },
     illuminance: {
       label: "Luminosidade", card: "Luminosidade", icon: "mdi:brightness-5",
-      domain: ["sensor"], dc: ["illuminance"], unit: "lx", dec: 0,
+      domain: ["sensor"], dc: ["illuminance"], units: ["lx", "lm"],
+      words: /lumin|ilumin|lux|bright/i, unit: "lx", dec: 0,
       stops: [5, 50, 200, 1000], ramp: "escuro_claro",
     },
     power: {
       label: "Potência", card: "Potência", icon: "mdi:flash",
-      domain: ["sensor"], dc: ["power", "apparent_power"], unit: "W", dec: 1, sum: "power",
+      domain: ["sensor"], dc: ["power", "apparent_power"], units: ["w", "kw", "va", "kva"],
+      words: /pot[eê]ncia|power|watt/i, unit: "W", dec: 1, sum: "power",
       stops: [50, 300, 1000, 3000], ramp: "bom_ruim",
     },
     energy: {
       label: "Consumo", card: "Consumo", icon: "mdi:lightning-bolt",
-      domain: ["sensor"], dc: ["energy"], unit: "kWh", dec: 2, sum: "energy",
+      domain: ["sensor"], dc: ["energy"], units: ["wh", "kwh", "mwh"],
+      words: /consumo|energia|energy/i, unit: "kWh", dec: 2, sum: "energy",
       stops: [1, 5, 20, 50], ramp: "bom_ruim",
     },
     co2: {
       label: "Dióxido de Carbono", card: "CO₂", icon: "mdi:molecule-co2",
-      domain: ["sensor"], dc: ["carbon_dioxide"], unit: "ppm", dec: 0,
+      domain: ["sensor"], dc: ["carbon_dioxide"], units: ["ppm"],
+      words: /co2|di[oó]xido|carbono/i, unit: "ppm", dec: 0,
       stops: [600, 800, 1000, 1500], ramp: "bom_ruim",
     },
     formaldehyde: {
       label: "Formaldeído", card: "Formaldeído", icon: "mdi:flask-outline",
       domain: ["sensor"], dc: ["volatile_organic_compounds", "volatile_organic_compounds_parts"],
-      unit: "mg/m³", dec: 3,
-      stops: [0.03, 0.06, 0.1, 0.2], ramp: "bom_ruim",
+      units: ["mg/m³", "µg/m³", "ppm", "ppb"], words: /formalde|ch2o|hcho/i,
+      unit: "mg/m³", dec: 3, stops: [0.03, 0.06, 0.1, 0.2], ramp: "bom_ruim",
+      stopsByUnit: {
+        "mg/m³": [0.03, 0.06, 0.1, 0.2], "µg/m³": [30, 60, 100, 200],
+        ppm: [0.024, 0.05, 0.08, 0.16], ppb: [24, 50, 80, 160],
+      },
     },
     voc: {
       label: "Compostos Orgânicos Voláteis", card: "COV", icon: "mdi:air-filter",
       domain: ["sensor"], dc: ["volatile_organic_compounds", "volatile_organic_compounds_parts"],
-      unit: "ppb", dec: 0,
-      stops: [100, 300, 1000, 3000], ramp: "bom_ruim",
+      units: ["ppb", "ppm", "µg/m³", "mg/m³"], words: /cov\b|voc|org[aâ]nico/i,
+      unit: "ppb", dec: 0, stops: [100, 300, 1000, 3000], ramp: "bom_ruim",
+      stopsByUnit: {
+        ppb: [100, 300, 1000, 3000], ppm: [0.1, 0.3, 1, 3],
+        "µg/m³": [220, 660, 2200, 5500], "mg/m³": [0.22, 0.66, 2.2, 5.5],
+      },
     },
     pm25: {
       label: "PM2.5", card: "PM2.5", icon: "mdi:blur",
-      domain: ["sensor"], dc: ["pm25"], unit: "µg/m³", dec: 0,
+      domain: ["sensor"], dc: ["pm25"], units: ["µg/m³", "ug/m3"],
+      words: /pm ?2[.,]?5/i, unit: "µg/m³", dec: 0,
       stops: [12, 35, 55, 150], ramp: "bom_ruim",
     },
     pm10: {
       label: "PM10", card: "PM10", icon: "mdi:blur-linear",
-      domain: ["sensor"], dc: ["pm10"], unit: "µg/m³", dec: 0,
+      domain: ["sensor"], dc: ["pm10"], units: ["µg/m³", "ug/m3"],
+      words: /pm ?10/i, unit: "µg/m³", dec: 0,
       stops: [54, 154, 254, 354], ramp: "bom_ruim",
     },
     aqi: {
       label: "Qualidade do Ar", card: "Qualidade do Ar", icon: "mdi:weather-hazy",
-      domain: ["sensor"], dc: ["aqi"], unit: "AQI", dec: 0,
+      domain: ["sensor"], dc: ["aqi"], units: ["aqi"],
+      words: /qualidade.*ar|air.*qual|aqi/i, unit: "AQI", dec: 0,
       stops: [50, 100, 150, 200], ramp: "bom_ruim",
+      // purificador Tuya não devolve número: devolve "great". Cada texto vira
+      // uma posição de 0 a 1 na mesma rampa, com rótulo em pt-BR.
+      texts: {
+        excellent: [0, "Excelente"], great: [0, "Ótima"], good: [0.25, "Boa"],
+        mild: [0.5, "Média"], moderate: [0.5, "Média"], fair: [0.5, "Média"],
+        poor: [0.75, "Ruim"], bad: [0.75, "Ruim"], unhealthy: [0.85, "Insalubre"],
+        severe: [1, "Péssima"], hazardous: [1, "Perigosa"],
+      },
     },
     battery: {
       label: "Bateria", card: "Bateria", icon: "mdi:battery",
-      domain: ["sensor"], dc: ["battery"], unit: "%", dec: 0,
+      domain: ["sensor"], dc: ["battery"], units: ["%"],
+      words: /bateria|battery/i, unit: "%", dec: 0,
       stops: [10, 20, 50, 80], ramp: "vazio_cheio",
     },
     noise: {
       label: "Ruído", card: "Ruído", icon: "mdi:volume-high",
-      domain: ["sensor"], dc: ["sound_pressure"], unit: "dB", dec: 0,
+      domain: ["sensor"], dc: ["sound_pressure"], units: ["db", "dba", "db(a)"],
+      words: /ru[ií]do|noise|decib/i, unit: "dB", dec: 0,
       stops: [35, 45, 55, 70], ramp: "bom_ruim",
     },
     generic: {
       label: "Sensor (genérico)", card: "Sensor", icon: "mdi:gauge",
       domain: ["sensor", "binary_sensor", "input_number", "number", "counter"],
-      unit: "", dec: 1,
-      stops: [20, 40, 60, 80], ramp: "bom_ruim",
+      unit: "", dec: 1, stops: [20, 40, 60, 80], ramp: "bom_ruim",
     },
   };
+
+  // Papel de quem não respondeu: um vermelho que se nota sem gritar.
+  // nível alto E um empurrão no tom: no papel claro, tom 6 sozinho ainda dá um
+  // rosa quase branco — e sensor caído que ninguém vê não avisa nada.
+  const PAPEL_MORTO = { hue: "red", nivel: 0.8, alcance: 0.35 };
+
   const KIND_ORDER = Object.keys(KINDS);
   const kindOf = (k) => KINDS[k] || KINDS.generic;
 
@@ -352,7 +491,7 @@
     shape: "rounded",          // rounded | circle
     corner: 26,                // % do lado, só no rounded
     quality: "alta",           // alta | equilibrada | plana
-    paper_theme: "auto",       // auto | claro | escuro
+    paper_theme: "auto",       // auto | claro | claro-medio | medio | escuro-medio | escuro
     paper_mode: "dinamico",    // dinamico | fixo
     paper_color: "paper",      // usado no modo fixo
     ramp: "",                  // vazio = a rampa padrão da grandeza
@@ -364,12 +503,16 @@
     show_unit: true,
     show_label: false,
     show_ring: true,
+    intensity: null,           // null = o alcance padrão da rampa
     icon_size: null,           // % do lado; null = automático
     value_size: null,
     tap_action: { action: "none" },
     hold_action: { action: "none" },
     double_tap_action: { action: "none" },
   };
+
+  // Os cinco degraus de papel. «auto» não está aqui: ele pergunta ao tema do HA.
+  const TONS = { claro: 0, "claro-medio": 0.25, medio: 0.5, "escuro-medio": 0.75, escuro: 1 };
 
   const ACT_NONE = { action: "none" };
   const isNone = (a) => !a || !a.action || a.action === "none";
@@ -479,59 +622,98 @@
       const st = this._hass.states[c.entity];
       if (!st || isDead(st.state)) return { ok: false, state: st ? st.state : "unavailable" };
       if (k.binary) return { ok: true, on: st.state === "on", state: st.state };
+      const v = num(st.state);
+      // Sensor que devolve palavra em vez de número (o purificador Tuya diz
+      // "great"): a palavra vira rótulo em pt-BR e uma posição de 0 a 1 na
+      // rampa — sem isto o card mostraria travessão num sensor que funciona.
+      if (v === null && k.texts) {
+        const t = k.texts[String(st.state).toLowerCase().replace(/[ _-]/g, "")]
+          || k.texts[String(st.state).toLowerCase()];
+        if (t) return { ok: true, texto: t[1], f: t[0], state: st.state, unit: "" };
+      }
       return {
         ok: true,
-        value: num(st.state),
+        value: v,
         unit: c.unit || st.attributes.unit_of_measurement || k.unit || "",
         state: st.state,
       };
     }
 
-    _dark() {
+    // Claridade do papel, de 0 (dia) a 1 (noite). Os três meios-termos existem
+    // porque «claro» e «escuro» não davam conta: dashboard escuro com papel
+    // branco fere a vista, e papel preto some no fundo preto.
+    _tom() {
       const t = this._config.paper_theme;
-      if (t === "claro") return false;
-      if (t === "escuro") return true;
-      return !!(this._hass?.themes?.darkMode);
+      if (t in TONS) return TONS[t];
+      return this._hass?.themes?.darkMode ? 1 : 0;
     }
 
-    // Papel + tinta do estado atual. É AQUI que mora a dinâmica pedida: o fundo
-    // não é decoração fixa, é a leitura do sensor traduzida em papel.
+    // Papel + tinta do estado atual. É AQUI que mora a regra do dono: o fundo
+    // é o estado E a intensidade dele. Matiz diz o quê, nível diz quanto.
     _skin(r) {
-      const c = this._config, k = this._kind, dark = this._dark();
+      const c = this._config, k = this._kind, tom = this._tom();
+      const monta = (hue, nivel, ring) => {
+        const sup = paperSurface(hue, nivel, tom);
+        const acc = accentOn(hue, sup.L);
+        return { paper: sup.bg, accent: acc, ring: ring || acc, L: sup.L };
+      };
+      // não respondeu: vermelho que se nota sem gritar
       if (!r.ok) {
-        const a = dark ? "rgba(255, 150, 150, 0.72)" : "rgba(150, 40, 40, 0.72)";
-        return {
-          paper: dark ? "linear-gradient(145deg, #2a2724, #171512)" : "linear-gradient(145deg, #ecebe7, #d8d6d0)",
-          accent: a, ring: a, dark,
-        };
+        const t = tomComNivel(tom, PAPEL_MORTO.nivel, PAPEL_MORTO.alcance);
+        const sup = paperSurface(PAPEL_MORTO.hue, PAPEL_MORTO.nivel, t);
+        const acc = accentOn(PAPEL_MORTO.hue, sup.L);
+        return { paper: sup.bg, accent: acc, ring: acc, L: sup.L };
       }
+
       if (c.paper_mode === "fixo") {
-        const key = c.paper_color || "paper";
-        const a = accentOf(key, dark);
-        return { paper: paperOf(key, dark), accent: a, ring: a, dark };
+        const m = /^([a-z]+)-([1-7])$/.exec(String(c.paper_color || "").trim());
+        return monta(m ? m[1] : null, m ? (+m[2] - 1) / 6 : 0.15, null);
       }
       if (k.binary) {
-        const side = r.on ? k.on : k.off;
-        const key = (r.on ? c.paper_on : c.paper_off) || side.paper;
-        const a = accentOf(key, dark);
-        return { paper: paperOf(key, dark), accent: a, ring: a, dark };
+        const lado = r.on ? k.on : k.off;
+        const chave = r.on ? c.paper_on : c.paper_off;
+        const m = /^([a-z]+)-([1-7])$/.exec(String(chave || "").trim());
+        return monta(m ? m[1] : lado.hue, m ? (+m[2] - 1) / 6 : lado.nivel, null);
       }
-      const stops = this._stops();
-      const ramp = c.ramp || k.ramp;
-      const v = Number.isFinite(r.value) ? r.value : 0;
-      const key = rampKey(ramp, bandOf(v, stops), stops.length + 1);
-      const a = accentOf(key, dark);
-      // Temperatura e umidade têm escala canônica da casa (regra global 40).
-      // Ela vive no ANEL, não no número: amarelo puro (25 °C) sobre papel claro
-      // é ilegível em 22 px, mas num anel de 1 cqi é exatamente o sinal certo.
-      return { paper: paperOf(key, dark), accent: a, ring: (k.accent && k.accent(v)) || a, dark };
+      const stops = this._stops(r.unit);
+      const n = stops.length + 1;
+      const banda = r.texto !== undefined
+        ? Math.round(r.f * (n - 1))
+        : bandOf(Number.isFinite(r.value) ? r.value : 0, stops);
+
+      // Temperatura e umidade: o papel É a escala canônica da casa (regra 40),
+      // pousada sobre o papel neutro. Nada de rampa de matiz aqui — a escala
+      // já carrega o quê e o quanto.
+      if (k.escala && Number.isFinite(r.value)) {
+        const rgb = rgbOf(mwClimateColor(k.escala, r.value, 1));
+        if (rgb) {
+          const sup = paperTinted(rgb, tom);
+          const ink = inkOn(sup.L);
+          return { paper: sup.bg, accent: ink.text, ring: `rgb(${rgb.join(", ")})`, L: sup.L };
+        }
+      }
+      const p = rampPaper(c.ramp || k.ramp, banda, n);
+      const alc = c.intensity === null || c.intensity === undefined
+        ? p.alcance : Math.max(0, Math.min(1, Number(c.intensity) / 100));
+      const sup = paperSurface(p.hue, p.nivel, tomComNivel(tom, p.nivel, alc));
+      const acc = accentOn(p.hue, sup.L);
+      return { paper: sup.bg, accent: acc, ring: acc, L: sup.L };
     }
 
-    _stops() {
+    // Limites da faixa: o do dono vence; senão o da unidade (COV em ppm não é
+    // COV em ppb); senão o padrão da grandeza.
+    _stops(unidade) {
       const raw = String(this._config.stops || "").trim();
       if (raw) {
         const list = raw.split(/[,;\s]+/).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
         if (list.length) return list;
+      }
+      const porUnidade = this._kind.stopsByUnit;
+      if (porUnidade && unidade) {
+        const u = String(unidade).trim().toLowerCase();
+        for (const chave of Object.keys(porUnidade)) {
+          if (chave.toLowerCase() === u) return porUnidade[chave];
+        }
       }
       return this._kind.stops || [];
     }
@@ -540,7 +722,7 @@
 
     _update(force) {
       const r = this._read();
-      const key = JSON.stringify([r.ok, r.on, r.value, r.count, r.partial, this._dark()]);
+      const key = JSON.stringify([r.ok, r.on, r.value, r.count, r.partial, r.texto, this._tom()]);
       if (!force && key === this._paintKey && this._built) return;
       this._paintKey = key;
       if (!this._built) this._build();
@@ -555,7 +737,18 @@
       const c = this._config, k = this._kind;
       if (!this.shadowRoot) this.attachShadow({ mode: "open" });
       const q = SHADOWS[c.quality] ? c.quality : "alta";
-      const radius = c.shape === "circle" ? "50%" : `${Math.max(0, Math.min(50, Number(c.corner) || 26))}%`;
+      const circulo = c.shape === "circle";
+      const corner = Math.max(0, Math.min(50, Number(c.corner) ?? 26));
+      const radius = circulo ? "50%" : `${corner}%`;
+      // O anel fica 5 % para dentro, então a caixa dele tem 90 % do lado. Para
+      // as duas curvas serem CONCÊNTRICAS, o raio do anel em px é o do card
+      // menos o recuo — e, em % da caixa menor, isso é (corner − 5) ÷ 0,9.
+      // Herdar o raio do card (o que estava aqui) desenha um anel de canto
+      // grande demais dentro de um canto pequeno: foi o que apareceu no botão
+      // de ruído.
+      const recuo = 5;
+      const ringRadius = circulo ? "50%"
+        : `${Math.max(0, (corner - recuo) / (1 - 2 * recuo / 100)).toFixed(1)}%`;
       const showValue = c.show_value === null || c.show_value === undefined
         ? !k.binary : c.show_value !== false;
       const showIcon = c.show_icon !== false;
@@ -595,7 +788,7 @@
           /* anel de estado: é ele que carrega a escala canônica de clima
              (regra global 40) sem obrigar o número a ser amarelo puro sobre
              papel claro. Nas demais grandezas repete a tinta de destaque. */
-          .ring{position:absolute;inset:5%;border-radius:inherit;pointer-events:none;z-index:0;
+          .ring{position:absolute;inset:${recuo}%;border-radius:${ringRadius};pointer-events:none;z-index:0;
             border:2px solid var(--mw-ring);opacity:.6;transition:border-color .35s ease;}
           @supports (width:1cqi){ .ring{border-width:0.9cqi;} }
           .ct{position:relative;z-index:1;display:flex;flex-direction:column;
@@ -644,7 +837,7 @@
     _paint(r) {
       const c = this._config, k = this._kind, el = this._el;
       const skin = this._skin(r);
-      const ink = paperInk(skin.dark);
+      const ink = inkOn(skin.L);
       const q = this._quality;
       const card = el.card;
       card.style.setProperty("--mw-paper", skin.paper);
@@ -653,10 +846,10 @@
       card.style.setProperty("--mw-ink", ink.text);
       card.style.setProperty("--mw-ink-dim", ink.dim);
       card.style.setProperty("--mw-border", ink.line);
-      card.style.setProperty("--mw-shadow", SHADOWS[q](skin.dark));
-      card.style.setProperty("--mw-icon-shadow", ICON_SHADOW[q](skin.dark));
+      card.style.setProperty("--mw-shadow", SHADOWS[q](ESCURO(skin.L)));
+      card.style.setProperty("--mw-icon-shadow", ICON_SHADOW[q](ESCURO(skin.L)));
       card.style.setProperty("--mw-text-shadow",
-        q === "plana" || skin.dark ? "none" : "0 1px 0 rgba(255,255,255,0.55)");
+        q === "plana" || ESCURO(skin.L) ? "none" : "0 1px 0 rgba(255,255,255,0.55)");
 
       if (el.icon) {
         let icon = c.icon;
@@ -669,10 +862,20 @@
         let value = NO_READING, unit = "";
         if (r.ok && k.binary) {
           value = r.on ? (c.text_on || k.on.text) : (c.text_off || k.off.text);
+        } else if (r.ok && r.texto !== undefined) {
+          value = r.texto;                       // sensor que fala em vez de contar
         } else if (r.ok) {
-          const dec = c.decimals === null || c.decimals === undefined
-            ? (Math.abs(r.value) >= 100 ? 0 : (k.dec ?? 1))
+          // COV em ppm chega como 0,4 — com as casas do ppb (zero) vira "0",
+          // que é uma leitura errada com cara de leitura certa. Valor abaixo de
+          // 1 ganha casas até mostrar alguma coisa.
+          const abs = Math.abs(r.value);
+          let dec = c.decimals === null || c.decimals === undefined
+            ? (abs >= 100 ? 0 : (k.dec ?? 1))
             : Number(c.decimals);
+          if (c.decimals === null || c.decimals === undefined) {
+            if (abs > 0 && abs < 0.1) dec = Math.max(dec, 3);
+            else if (abs > 0 && abs < 1) dec = Math.max(dec, 2);
+          }
           const [x, u] = k.sum ? stepUnit(r.value, k.unit) : [r.value, r.unit];
           value = fmtNum(x, Math.max(0, Math.min(4, dec)), this._hass?.locale?.language);
           unit = c.show_unit === false ? "" : (c.unit || u || "");
@@ -811,6 +1014,7 @@
     show_unit: "Mostrar unidade",
     show_label: "Mostrar rótulo",
     show_ring: "Anel de estado na borda",
+    intensity: "Alcance da intensidade (quanto o estado escurece/acende o papel)",
     icon_size: "Tamanho do ícone (% do lado)",
     value_size: "Tamanho do valor (% do lado)",
     tap_action: "Toque",
@@ -839,13 +1043,37 @@
     }
     _kindKey() { return this._typeKind() || this._config?.kind || "generic"; }
     _fixed() { return !!this._typeKind(); }
+    // Achar a entidade certa é o passo em que o editor mais decepciona. Aqui a
+    // busca é em cascata: device_class (o jeito certo), depois a unidade,
+    // depois o nome em pt-BR — porque integração Tuya entrega COV em ppm e
+    // PM2.5 SEM unidade e SEM device_class, e um filtro só por device_class
+    // devolveria lista vazia num sensor que existe e funciona.
+    _sel(k, multiplo) {
+      const hass = this._hass;
+      const base = { entity: { domain: k.domain, multiple: !!multiplo } };
+      if (!hass) return base;
+      const dom = new Set(k.domain);
+      const porClasse = [], porUnidade = [], porNome = [];
+      for (const [id, st] of Object.entries(hass.states)) {
+        if (!dom.has(id.split(".")[0])) continue;
+        const a = st.attributes || {};
+        if (k.dc && k.dc.includes(a.device_class)) { porClasse.push(id); continue; }
+        const u = String(a.unit_of_measurement ?? "").trim().toLowerCase();
+        if (k.units && k.units.includes(u) && !a.device_class) { porUnidade.push(id); continue; }
+        if (k.words && (k.words.test(id) || k.words.test(String(a.friendly_name || "")))) porNome.push(id);
+      }
+      const lista = porClasse.concat(porUnidade, porNome);
+      return lista.length
+        ? { entity: { include_entities: lista, multiple: !!multiplo } }
+        : base;
+    }
+
     _src() { return this._config?.area && !(this._config?.entities || []).length ? "area" : "entities"; }
 
     _schema() {
       const kk = this._kindKey();
       const k = kindOf(kk);
       const c = this._config || {};
-      const dark = c.paper_theme === "escuro";
       const s = [];
       if (!this._fixed()) {
         s.push({
@@ -862,12 +1090,9 @@
           ] } },
         });
         if (this._src() === "area") s.push({ name: "area", selector: { area: {} } });
-        else s.push({ name: "entities", selector: { entity: { multiple: true, domain: k.domain, device_class: k.dc } } });
+        else s.push({ name: "entities", selector: this._sel(k, true) });
       } else {
-        s.push({
-          name: "entity", required: true,
-          selector: { entity: k.dc ? { domain: k.domain, device_class: k.dc } : { domain: k.domain } },
-        });
+        s.push({ name: "entity", required: true, selector: this._sel(k) });
       }
       s.push({ name: "name", selector: { text: {} } });
       s.push({ name: "icon", selector: { icon: {} } });
@@ -889,8 +1114,11 @@
         ] } } },
         { name: "paper_theme", selector: { select: { mode: "dropdown", options: [
           { value: "auto", label: "Acompanha o tema do HA" },
-          { value: "claro", label: "Sempre papel claro" },
-          { value: "escuro", label: "Sempre papel de noite" },
+          { value: "claro", label: "Papel de dia" },
+          { value: "claro-medio", label: "Papel de dia puxado para o escuro" },
+          { value: "medio", label: "Meio do caminho" },
+          { value: "escuro-medio", label: "Papel de noite puxado para o claro" },
+          { value: "escuro", label: "Papel de noite" },
         ] } } },
         { name: "paper_mode", selector: { select: { mode: "dropdown", options: [
           { value: "dinamico", label: "Dinâmica — muda com o estado" },
@@ -899,16 +1127,17 @@
       );
       const mode = c.paper_mode || "dinamico";
       if (mode === "fixo") {
-        look.push({ name: "paper_color", selector: { select: { mode: "dropdown", options: paperOptionsFor(dark) } } });
+        look.push({ name: "paper_color", selector: { select: { mode: "dropdown", options: paperOptions() } } });
       } else if (k.binary) {
         look.push(
-          { name: "paper_on", selector: { select: { mode: "dropdown", options: paperOptionsFor(dark) } } },
-          { name: "paper_off", selector: { select: { mode: "dropdown", options: paperOptionsFor(dark) } } },
+          { name: "paper_on", selector: { select: { mode: "dropdown", options: paperEstadoOptions(k.on) } } },
+          { name: "paper_off", selector: { select: { mode: "dropdown", options: paperEstadoOptions(k.off) } } },
         );
       } else {
         look.push(
           { name: "ramp", selector: { select: { mode: "dropdown", options: Object.keys(RAMPS).map((r) => ({ value: r, label: RAMP_LABELS[r] })) } } },
           { name: "stops", selector: { text: {} } },
+          { name: "intensity", selector: { number: { min: 0, max: 100, step: 5, mode: "slider", unit_of_measurement: "%" } } },
         );
       }
       look.push(
