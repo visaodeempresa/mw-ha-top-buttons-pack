@@ -74,6 +74,261 @@ HA (more-info, navegar, chamar ação, URL…).
 dos cinco degraus: papel de dia · dia puxado para o escuro · meio do caminho ·
 noite puxado para o claro · papel de noite.
 
+<!-- GALERIA:BEGIN — gerado por tools/galeria.js · não editar à mão -->
+## Galeria
+
+As duas imagens abaixo e todo o YAML desta seção saem da **mesma** fonte — as
+filas da bancada (`docs/preview.html`), transcritas por `tools/galeria.js`.
+Não existe aqui um card que a imagem mostre e o código não faça.
+
+<table><tr>
+<td width="50%"><img src="https://raw.githubusercontent.com/visaodeempresa/mw-ha-top-buttons-pack/main/docs/preview-dia.png" alt="MW Top Buttons Pack — papel de dia"><br><sub>papel de dia</sub></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/visaodeempresa/mw-ha-top-buttons-pack/main/docs/preview-noite.png" alt="MW Top Buttons Pack — papel de noite"><br><sub>papel de noite</sub></td>
+</tr></table>
+
+> As duas imagens são geradas em modo headless a partir da própria bancada —
+> receita em [`docs/README-imagens.md`](docs/README-imagens.md). Depois de mexer
+> nas filas, rode `node tools/galeria.js` para o YAML acompanhar.
+
+### A mesma grandeza, três leituras — o papel É a leitura
+
+```yaml
+type: grid
+columns: 7
+square: false
+cards:
+  - type: custom:mw-top-temperature-card
+    entity: sensor.varanda_temperatura
+    show_label: true
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sala_temperatura
+    show_label: true
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sotao_temperatura
+    show_label: true
+  - type: custom:mw-top-humidity-card
+    entity: sensor.escritorio_umidade
+    show_label: true
+  - type: custom:mw-top-humidity-card
+    entity: sensor.sala_umidade
+    show_label: true
+  - type: custom:mw-top-co2-card
+    entity: sensor.sala_co2
+    show_label: true
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    show_label: true
+```
+
+### O fundo é o estado E a intensidade dele — luminosidade acende o papel
+
+```yaml
+type: grid
+columns: 7
+square: false
+cards:
+  - type: custom:mw-top-illuminance-card
+    entity: sensor.quarto_luminosidade
+    show_label: true
+  - type: custom:mw-top-illuminance-card
+    entity: sensor.sala_luminosidade
+    show_label: true
+  - type: custom:mw-top-illuminance-card
+    entity: sensor.varanda_luminosidade
+    show_label: true
+  - type: custom:mw-top-battery-card
+    entity: sensor.porta_sensor_bateria
+    show_label: true
+  - type: custom:mw-top-door-window-card
+    entity: binary_sensor.porta_da_sala
+    show_value: true
+  - type: custom:mw-top-door-window-card
+    entity: binary_sensor.janela_da_sala
+    show_value: true
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sensor_caido
+    show_label: true
+```
+
+### Temperatura e umidade: o papel É a escala canônica da casa
+
+```yaml
+type: grid
+columns: 7
+square: false
+cards:
+  - type: custom:mw-top-temperature-card
+    entity: sensor.freezer_temperatura
+    show_label: true
+  - type: custom:mw-top-temperature-card
+    entity: sensor.varanda_temperatura
+    show_label: true
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sala_temperatura
+    show_label: true
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sotao_temperatura
+    show_label: true
+  - type: custom:mw-top-humidity-card
+    entity: sensor.escritorio_umidade
+    show_label: true
+  - type: custom:mw-top-humidity-card
+    entity: sensor.sala_umidade
+    show_label: true
+  - type: custom:mw-top-humidity-card
+    entity: sensor.banheiro_umidade
+    show_label: true
+```
+
+### Os cinco degraus de papel (o mesmo CO₂ de 1240 ppm)
+
+```yaml
+type: grid
+columns: 7
+square: false
+cards:
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    paper_theme: claro
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    paper_theme: claro-medio
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    paper_theme: medio
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    paper_theme: escuro-medio
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    paper_theme: escuro
+  - type: custom:mw-top-aqi-card
+    entity: sensor.purificador_qualidade_do_ar
+    show_label: true
+  - type: custom:mw-top-voc-card
+    entity: sensor.escritorio_cov
+    show_label: true
+```
+
+### O pacote inteiro (quadrado de cantos arredondados)
+
+```yaml
+type: grid
+columns: 7
+square: false
+cards:
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sala_temperatura
+  - type: custom:mw-top-humidity-card
+    entity: sensor.sala_umidade
+  - type: custom:mw-top-door-window-card
+    entity: binary_sensor.porta_da_sala
+  - type: custom:mw-top-door-window-card
+    entity: binary_sensor.janela_da_sala
+  - type: custom:mw-top-occupancy-card
+    entity: binary_sensor.escritorio_ocupacao
+  - type: custom:mw-top-motion-card
+    entity: binary_sensor.corredor_movimento
+  - type: custom:mw-top-illuminance-card
+    entity: sensor.corredor_luminosidade
+  - type: custom:mw-top-power-card
+    entities:
+      - sensor.tomada_rack_potencia
+      - sensor.chuveiro_potencia
+  - type: custom:mw-top-energy-card
+    entity: sensor.casa_consumo
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+  - type: custom:mw-top-formaldehyde-card
+    entity: sensor.sala_formaldeido
+  - type: custom:mw-top-voc-card
+    entity: sensor.sala_cov
+  - type: custom:mw-top-pm25-card
+    entity: sensor.sala_pm25
+  - type: custom:mw-top-pm10-card
+    entity: sensor.sala_pm10
+  - type: custom:mw-top-aqi-card
+    entity: sensor.casa_qualidade_do_ar
+  - type: custom:mw-top-battery-card
+    entity: sensor.porta_sensor_bateria
+  - type: custom:mw-top-noise-card
+    entity: sensor.sala_ruido
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sensor_caido
+```
+
+### Círculo, com rótulo
+
+```yaml
+type: grid
+columns: 6
+square: false
+cards:
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sala_temperatura
+    shape: circle
+    show_label: true
+  - type: custom:mw-top-humidity-card
+    entity: sensor.sala_umidade
+    shape: circle
+    show_label: true
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    shape: circle
+    show_label: true
+  - type: custom:mw-top-power-card
+    entities:
+      - sensor.tomada_rack_potencia
+      - sensor.chuveiro_potencia
+    shape: circle
+    show_label: true
+    name: Sala
+  - type: custom:mw-top-occupancy-card
+    entity: binary_sensor.escritorio_ocupacao
+    shape: circle
+    show_label: true
+  - type: custom:mw-top-battery-card
+    entity: sensor.porta_sensor_bateria
+    shape: circle
+    show_label: true
+```
+
+### Os três níveis de 3D · e só o ícone
+
+```yaml
+type: grid
+columns: 7
+square: false
+cards:
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    quality: alta
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    quality: equilibrada
+  - type: custom:mw-top-co2-card
+    entity: sensor.quarto_co2
+    quality: plana
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sotao_temperatura
+    show_value: false
+  - type: custom:mw-top-door-window-card
+    entity: binary_sensor.porta_da_sala
+    shape: circle
+  - type: custom:mw-top-humidity-card
+    entity: sensor.sala_umidade
+    show_icon: false
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sala_temperatura
+    show_ring: false
+  - type: custom:mw-top-temperature-card
+    entity: sensor.sala_temperatura
+    paper_mode: fixo
+    paper_color: violet-3
+```
+
+<!-- GALERIA:END -->
+
 ## Instalação
 
 ### HACS (recomendado)
@@ -193,11 +448,14 @@ uma linha de JS de medição.
 ```bash
 node --check dist/mw-top-buttons-pack.js
 node tools/probe.js
+node tools/galeria.js --check
 ```
 
 O `probe.js` instancia os 17 tipos fora do navegador e confere soma com
-unidades misturadas, soma por ambiente, leitura morta, dinâmica do papel,
-formato 1:1 e ação padrão «Nada».
+unidades misturadas, soma por ambiente, leitura morta, dinâmica do papel, os
+cinco degraus, o anel concêntrico, os sensores sem `device_class`, o formato
+1:1 e a ação padrão «Nada». O `galeria.js --check` reprova se o YAML do README
+tiver saído de sincronia com a bancada que gerou as imagens.
 
 ## Licença
 

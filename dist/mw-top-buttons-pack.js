@@ -13,7 +13,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.2.0";
+  const VERSION = "0.2.1";
 
   // Leitura morta: a entidade existe mas não tem valor. Escrever "unavailable"
   // dentro de um botão de 90 px é ilegível e não informa nada — fica o
@@ -761,7 +761,10 @@
       const valuePct = Number(c.value_size) || (rows === 1 ? 34 : 26);
       const unitPct = Math.round(valuePct * 0.42);
       const labelPct = 10;
-      const pad = c.shape === "circle" ? 19 : 10;
+      // No círculo o conteúdo mora no quadrado inscrito (70,7 % do diâmetro),
+      // então a folga tem que caber TUDO que for desenhado: com ícone, valor e
+      // rótulo os 19 % deixavam o rótulo encostar na curva e ser cortado.
+      const pad = c.shape === "circle" ? (rows >= 3 ? 13 : 19) : 10;
       const rim = q === "alta" ? `<div class="rim"></div>` : "";
       const ring = c.show_ring !== false ? `<div class="ring"></div>` : "";
       this._showValue = showValue;

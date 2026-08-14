@@ -1,5 +1,20 @@
 # HISTÓRICO
 
+## 0.2.1 — 2026-08-14
+
+- **Galeria no README**: as duas imagens (papel de dia e de noite) e todo o
+  YAML da seção saem da **mesma** fonte — as filas da bancada. `tools/galeria.js`
+  transcreve, e `--check` reprova README fora de sincronia. README que mostra um
+  card e ensina outro deixa de ser possível
+- imagens geradas em headless a partir da própria bancada, não print à mão
+  (receita e armadilhas em `docs/README-imagens.md`)
+- entidades de mentira da bancada ganharam nomes de gente
+  (`sensor.varanda_temperatura` no lugar de `sensor.t_frio`), porque agora elas
+  aparecem no README
+- **círculo com rótulo**: os 19 % de folga cortavam o rótulo na curva. Com
+  ícone + valor + rótulo a folga cai para 13 % — o conteúdo mora no quadrado
+  inscrito, que é 70,7 % do diâmetro
+
 ## 0.2.0 — 2026-08-14
 
 Rodada de ajuste visual pedida pelo dono, toda conferida na bancada:
