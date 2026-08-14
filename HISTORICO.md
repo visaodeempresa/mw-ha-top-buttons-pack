@@ -1,5 +1,17 @@
 # HISTÓRICO
 
+## 0.3.1 — 2026-08-14
+
+Dois defeitos da marca d'água, achados na primeira tela com dado real:
+
+- **valor longo estourava a largura** (`0,010 mg/m³` cortado nas duas pontas):
+  o encolhimento por comprimento tinha sido calibrado no corpo de 26 cqi e não
+  acompanhava o corpo grande. A referência agora anda junto com o corpo
+- **botão sem valor virava botão vazio**: porta, ocupação e movimento não
+  desenham número, então mandar o ícone para o fundo apagado deixava o botão
+  sem nada legível. Marca d'água agora exige que haja um valor para ocupar o
+  lugar do ícone
+
 ## 0.3.0 — 2026-08-14
 
 - **`icon_background`**: o ícone sai da coluna e vira **marca d'água** no fundo

@@ -13,7 +13,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.3.0";
+  const VERSION = "0.3.1";
 
   // Leitura morta: a entidade existe mas não tem valor. Escrever "unavailable"
   // dentro de um botão de 90 px é ilegível e não informa nada — fica o
@@ -759,13 +759,21 @@
       // Marca d'água: o ícone sai da coluna e vira fundo. O valor deixa de
       // dividir a altura com ele e passa a ter o botão inteiro — que é o
       // ponto: número grande, identidade preservada, sem poluir.
-      const marca = c.icon_background === true && showIcon;
+      // ... mas só quando há um valor para ficar no lugar dele. Sem valor
+      // (porta, ocupação, movimento — que se leem pelo ícone e pela cor), a
+      // marca d'água deixaria o botão sem nada legível dentro.
+      const marca = c.icon_background === true && showIcon && showValue;
       const rows = (showIcon && !marca ? 1 : 0) + (showValue ? 1 : 0) + (showLabel ? 1 : 0);
       // O ícone cresce quando é o único morador do botão. Tamanhos em `cqi`
       // (1% da largura do container): o botão fica proporcional em qualquer
       // grade sem uma linha de JS de medição.
       const iconPct = Number(c.icon_size) || (marca ? 64 : rows === 1 ? 46 : showValue ? 26 : 34);
       const valuePct = Number(c.value_size) || (marca ? 38 : rows === 1 ? 34 : 26);
+      // O encolhimento por comprimento (--mw-vk) foi calibrado no corpo de
+      // 26 cqi. Com o valor sozinho e maior, a MESMA carga de caracteres cabe
+      // menos — «0,010 mg/m³» saía cortado nas duas pontas. A referência anda
+      // junto com o corpo, senão o piso vale para um tamanho e não para o outro.
+      const vkRef = 5.2 * 26 / valuePct;
       const unitPct = Math.round(valuePct * 0.42);
       const labelPct = 10;
       // No círculo o conteúdo mora no quadrado inscrito (70,7 % do diâmetro),
@@ -849,6 +857,7 @@
       };
       this._quality = q;
       this._marca = marca;
+      this._vkRef = vkRef;
       this._wire();
       this._built = true;
     }
@@ -909,9 +918,9 @@
         // «0,042 mg/m³» tem o dobro dos caracteres de «23,4 °C» e no mesmo corpo
         // encostaria nas duas bordas. A unidade pesa menos que o número porque
         // é desenhada menor. Piso em 0,5 para não virar letra de bula.
-        const carga = (value.length + 0.55 * unit.length) * (this._marca ? 0.82 : 1);
+        const carga = value.length + 0.55 * unit.length;
         el.card.style.setProperty("--mw-vk",
-          String(Math.max(0.5, Math.min(1, 5.2 / Math.max(1, carga))).toFixed(3)));
+          String(Math.max(0.5, Math.min(1, (this._vkRef || 5.2) / Math.max(1, carga))).toFixed(3)));
       }
 
       if (this._showLabel) el.lb.textContent = this._label(r);

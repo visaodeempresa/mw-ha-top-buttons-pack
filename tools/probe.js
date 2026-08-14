@@ -296,6 +296,18 @@ console.log("\n— ícone como marca d'água —");
   check(vAgua && vNorm && +vAgua[1] > +vNorm[1],
     `o valor tinha que crescer sem o ícone dividindo a altura (${vNorm && vNorm[1]} → ${vAgua && vAgua[1]})`);
   check(/opacity:0.18/.test(agua.shadowRoot.innerHTML), "opacidade padrão da marca d'água");
+  // sem valor não há o que pôr no lugar do ícone: porta viraria botão vazio
+  const porta = build("mw-top-door-window-card", { entity: "binary_sensor.porta", icon_background: true });
+  check(!/class="wm"/.test(porta.shadowRoot.innerHTML) && /class="ic"/.test(porta.shadowRoot.innerHTML),
+    "grandeza sem valor não pode virar só marca d'água");
+  // «0,010 mg/m³» no corpo grande tem que encolher MAIS que no corpo normal
+  const longo = new reg["mw-top-formaldehyde-card"]();
+  longo.setConfig({ entity: "sensor.ch2o_longo", icon_background: true });
+  longo.hass = { ...hass, states: { ...hass.states,
+    "sensor.ch2o_longo": st(0.010, { unit_of_measurement: "mg/m³" }) } };
+  const vk = +/--mw-vk[^;]*/.exec(JSON.stringify(longo.shadowRoot.querySelector("ha-card").props)) ||
+    +longo.shadowRoot.querySelector("ha-card").props["--mw-vk"];
+  check(vk > 0 && vk < 0.62, `valor longo no corpo grande tinha que encolher mais (--mw-vk=${vk})`);
   check(/opacity:0.35/.test(build("mw-top-temperature-card",
     { entity: "sensor.sala_temp", icon_background: true, icon_opacity: 0.35 }).shadowRoot.innerHTML),
     "opacidade configurável");
